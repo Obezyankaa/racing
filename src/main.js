@@ -4,35 +4,47 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 const canvas = document.querySelector("canvas.webgl");
 const scene = new THREE.Scene();
 
-// пол
-const geometry = new THREE.PlaneGeometry(20, 20, 100, 100);
-const color = new THREE.Color("rgb(45, 44, 44)");
-const material = new THREE.MeshBasicMaterial({
-  color: color,
-  side: THREE.DoubleSide,
-  // wireframe: true,
-});
-const plane = new THREE.Mesh(geometry, material);
+
+/**
+ * Свет
+ */
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(ambientLight);
+
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(0, 1, 0); //default; light shining from top
+light.castShadow = true; // default false
+
+//Set up shadow properties for the light
+light.shadow.mapSize.width = 512; // default
+light.shadow.mapSize.height = 512; // default
+light.shadow.camera.near = 1; // default
+light.shadow.camera.far = 6; // default
+scene.add(light);
+
+
+/**
+ * Объекты на рендере
+ */
+const material = new THREE.MeshStandardMaterial();
+material.roughness = 0.7;
+
+// фигруа
+const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
+sphere.castShadow = true;
+// пол 
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), material);
+plane.receiveShadow = true;
 plane.rotation.x = -Math.PI * 0.5;
-scene.add(plane);
+plane.position.y = -0.5;
 
-const box = new THREE.BoxGeometry(1, 1, 1);
-const boxMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const boxMesh = new THREE.Mesh(box, boxMaterial);
-scene.add(boxMesh);
-
-// const light = new THREE.AmbientLight(0x404040); // soft white light
-// scene.add(light);
-
-// const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-// scene.add( directionalLight );
-
-
+scene.add(sphere, plane);
 
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
 };
+
 // 🧩 Обработка ресайза
 window.addEventListener("resize", () => {
   // Update sizes
@@ -48,14 +60,6 @@ window.addEventListener("resize", () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
-// // Cвет
-// const light = new THREE.AmbientLight(0x404040); // soft white light
-// scene.add(light);
-
-
-// const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-// scene.add( directionalLight );
-
 /**
  * Камера
  */
@@ -66,9 +70,9 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 );
-camera.position.x = 10;
-camera.position.y = 8;
-camera.position.z = 10;
+camera.position.x = 1;
+camera.position.y = 1;
+camera.position.z = 2;
 scene.add(camera);
 
 // контроль камеры
@@ -79,9 +83,11 @@ const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
 });
 
+// Включаем тени!
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap; // по умолчанию PCFShadowMap
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
 // Анимация
 const clock = new THREE.Clock();
 
