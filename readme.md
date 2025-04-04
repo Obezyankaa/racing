@@ -1,110 +1,158 @@
-# Three.js — Стартер и Объяснения
+# 🚗 Three.js Racing Game Drift
 
-Этот README-файл содержит пошаговые пояснения к стартовому шаблону проекта на Three.js. Он поможет понять, что делает каждая часть кода, и как это используется на практике. 
+Это соло проект в котором я хочу реализовать игру. 
+В игре будет несколько машин, 1 карта, возможность управлять машиной в дрифте, смена суток. 
+
 ---
 
 ## 📦 Импорты
+
 ```js
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { RectAreaLightHelper } from "three/examples/jsm/Addons.js";
 ```
-- **THREE** — основной модуль Three.js: сцены, камеры, рендереры и т.д.
-- **OrbitControls** — позволяет управлять камерой мышью. Подключается отдельно из examples.
 
-📘 Документация:
-- [OrbitControls](https://threejs.org/docs/#examples/en/controls/OrbitControls)
-- [Three.js](https://threejs.org/docs/#manual/en/introduction/Creating-a-scene)
+- **THREE** — основной модуль Three.js: сцены, геометрии, материалы и т.д.
+- **OrbitControls** — управление камерой мышью.
+- **GLTFLoader** — загрузчик 3D-моделей.
+- **RectAreaLightHelper** — визуализация RectAreaLight.
 
 ---
 
-## 🎯 Canvas (холст)
+## 🖼️ Canvas
+
 ```js
 const canvas = document.querySelector("canvas.webgl");
 ```
-- Получаем элемент `<canvas>` из HTML, на который будет рендериться 3D-сцена.
+- Указываем HTML-элемент `<canvas>`, в который будет отрисовываться 3D-сцена.
 
 ---
 
 ## 🌌 Сцена
+
 ```js
 const scene = new THREE.Scene();
 ```
-- Основной контейнер для всех 3D-объектов, камеры и источников света.
+- Контейнер для всех 3D-объектов, камеры и света.
 
 ---
 
-## 📏 Размеры экрана
-```js
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight,
-};
-```
-- Объект для хранения текущих размеров окна. Используется при инициализации и при ресайзе.
+## 🚘 Загрузка 3D-модели (Nissan GTR)
 
----
-
-## 🧩 Адаптация под resize
 ```js
-window.addEventListener("resize", () => {
-  // обновляем размеры
-  // обновляем aspect камеры
-  // обновляем размер рендерера
+const gltfLoader = new GLTFLoader();
+gltfLoader.load("/model/Nissan-GTR.glb", (gltf) => {
+  gltf.scene.position.y = -0.1;
+  gltf.scene.scale.set(0.5, 0.5, 0.5);
+
+  gltf.scene.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+
+  scene.add(gltf.scene);
 });
 ```
-- Обновляем:
-  - `sizes`
-  - `aspect` камеры (обязательно вызвать `updateProjectionMatrix()`)
-  - размер рендерера и `pixelRatio`
+
+- Модель масштабируется и настраивается для отрисовки теней.
 
 ---
 
-## 🎥 Камера
+## 🧱 Текстуры для пола
+
 ```js
-const camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 100);
-camera.position.z = 3;
-scene.add(camera);
+const textureLoader = new THREE.TextureLoader();
+const diffuse = textureLoader.load("./asphalt/aerial_asphalt_01_diff_1k.jpg");
+const normal = textureLoader.load("./asphalt/aerial_asphalt_01_nor_gl_1k.jpg");
+const rough = textureLoader.load("./asphalt/aerial_asphalt_01_arm_1k.jpg");
+
+// Повтор текстур
+[diffuse, normal, rough].forEach(tex => {
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 4);
+});
+diffuse.colorSpace = THREE.SRGBColorSpace;
 ```
-- `PerspectiveCamera` — даёт эффект перспективы (как в реальной жизни).
-- Параметры:
-  - `fov` — угол обзора
-  - `aspect` — соотношение сторон
-  - `near/far` — плоскости отсечения
 
 ---
 
-## 🕹️ OrbitControls
+## 🔦 Свет
+
 ```js
+const rectLight = new THREE.RectAreaLight(0xffffff, 1, 1, 4);
+rectLight.position.set(3, 1, 1);
+rectLight.lookAt(0, 0, 0);
+scene.add(rectLight);
+
+const rectLightHelper = new RectAreaLightHelper(rectLight);
+rectLight.add(rectLightHelper);
+```
+
+- Реалистичный источник света и его помощник.
+
+---
+
+## 🛏️ Пол
+
+```js
+const plane = new THREE.Mesh(
+  new THREE.PlaneGeometry(5, 5),
+  new THREE.MeshStandardMaterial({
+    map: diffuse,
+    normalMap: normal,
+    roughnessMap: rough,
+  })
+);
+plane.receiveShadow = true;
+plane.rotation.x = -Math.PI * 0.5;
+plane.position.y = -0.5;
+scene.add(plane);
+```
+
+---
+
+## 📊 Рендерер и камера
+
+```js
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
+camera.position.set(1, 1, 2);
+scene.add(camera);
+
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-```
-- Управление камерой с помощью мыши.
-- `enableDamping = true` — сглаживает движения (анимация).
 
----
-
-## 🖥️ Рендерер
-```js
 const renderer = new THREE.WebGLRenderer({ canvas });
-renderer.setSize(width, height);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 ```
-- Рендеринг сцены на канвас с помощью WebGL.
-- `pixelRatio` ограничивается для повышения производительности.
-
-📘 [WebGLRenderer](https://threejs.org/docs/#api/en/renderers/WebGLRenderer)
 
 ---
 
-## ⏱️ Clock
+## ↺ Resize окна
+
 ```js
-const clock = new THREE.Clock();
+window.addEventListener("resize", () => {
+  sizes.width = window.innerWidth;
+  sizes.height = window.innerHeight;
+
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(sizes.width, sizes.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
 ```
-- Используется для расчёта времени между кадрами и анимации.
 
 ---
 
-## 🔁 Цикл анимации
+## ⏱️ Цикл анимации
+
 ```js
 const tick = () => {
   controls.update();
@@ -114,9 +162,8 @@ const tick = () => {
 
 tick();
 ```
-- Главный цикл обновления.
-- `requestAnimationFrame` запускает `tick()` на каждый кадр (~60 FPS).
-- `controls.update()` обязателен при `enableDamping = true`.
+
+---
 
 ---
 
