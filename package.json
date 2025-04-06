@@ -12,7 +12,9 @@
     "vite": "^6.2.0"
   },
   "dependencies": {
-    "three": "^0.175.0"
+    "cannon-es": "^0.20.0",
+    "three": "^0.175.0",
+    "vite-plugin-restart": "^0.4.2"
   },
   "main": "vite.config.js"
 }

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as CANNON from "cannon-es";
 import { RectAreaLightHelper } from "three/examples/jsm/Addons.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -7,29 +8,36 @@ const canvas = document.querySelector("canvas.webgl");
 const scene = new THREE.Scene();
 
 /**
- * Модель и сжатие
+ * Физика
  */
-
-const gltfLoader = new GLTFLoader();
-gltfLoader.load("/model/Nissan-GTR.glb", (gltf) => {
-  console.log(gltf);
-  gltf.scene.position.y = -0.1;
-  gltf.scene.scale.set(0.5, 0.5, 0.5); // Уменьшаем модель
-
-  gltf.scene.traverse((child) => {
-    if (child.isMesh) {
-      child.castShadow = true; // Модель отбрасывает тень
-      child.receiveShadow = true; // Если нужно, чтобы модель принимала тень от других объектов
-    }
-  });
-
-  scene.add(gltf.scene);
-});
+// Виртуальный Мир
+const world = new CANNON.World();
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.allowSleep = true;
+world.gravity.set(0, -9.82, 0);
 
 /**
- * Текстуры 
- */ 
-const textureLoader = new THREE.TextureLoader();
+ * Модель
+ */
+// const gltfLoader = new GLTFLoader();
+// gltfLoader.load("/model/Nissan-GTR.glb", (gltf) => {
+//   // console.log(gltf);
+//   gltf.scene.position.y = -0.1;
+//   gltf.scene.scale.set(0.5, 0.5, 0.5); // Уменьшаем модель
+
+//   gltf.scene.traverse((child) => {
+//     if (child.isMesh) {
+//       child.castShadow = true; // Модель отбрасывает тень
+//       child.receiveShadow = true; // Если нужно, чтобы модель принимала тень от других объектов
+//     }
+//   });
+
+//   scene.add(gltf.scene);
+// });
+
+/**
+ * Текстуры
+ */ const textureLoader = new THREE.TextureLoader();
 
 const diffuse = textureLoader.load("./asphalt/aerial_asphalt_01_diff_1k.jpg");
 const normal = textureLoader.load("./asphalt/aerial_asphalt_01_nor_gl_1k.jpg");
@@ -53,7 +61,7 @@ rough.repeat.set(4, 4);
  * Свет
  */
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-// scene.add(ambientLight);
+scene.add(ambientLight);
 
 const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(0, 1, 0); //default; light shining from top
@@ -64,18 +72,18 @@ light.shadow.mapSize.width = 512; // default
 light.shadow.mapSize.height = 512; // default
 light.shadow.camera.near = 1; // default
 light.shadow.camera.far = 6; // default
-// scene.add(light);
+scene.add(light);
 
-const width = 1;
-const height = 4;
-const intensity = 1;
-const rectLight = new THREE.RectAreaLight(0xffffff, intensity, width, height);
-rectLight.position.set(3, 1, 1);
-rectLight.lookAt(0, 0, 0);
-scene.add(rectLight);
+// const width = 1;
+// const height = 4;
+// const intensity = 1;
+// const rectLight = new THREE.RectAreaLight(0xffffff, intensity, width, height);
+// rectLight.position.set(3, 1, 1);
+// rectLight.lookAt(0, 0, 0);
+// scene.add(rectLight);
 
-const rectLightHelper = new RectAreaLightHelper(rectLight);
-rectLight.add(rectLightHelper);
+// const rectLightHelper = new RectAreaLightHelper(rectLight);
+// rectLight.add(rectLightHelper);
 
 /**
  * Объекты на рендере
@@ -84,23 +92,41 @@ const material = new THREE.MeshStandardMaterial();
 material.roughness = 0.7;
 
 // фигруа
-// const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), material);
-// sphere.castShadow = true;
-// пол
+const normalMaterial = new THREE.MeshNormalMaterial();
+const phongMaterial = new THREE.MeshPhongMaterial();
 
-const plane = new THREE.Mesh(
-  new THREE.PlaneGeometry(5, 5),
+const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+const cubeMesh = new THREE.Mesh(cubeGeometry, normalMaterial);
+cubeMesh.position.x = -3;
+cubeMesh.position.y = 3;
+cubeMesh.castShadow = true;
+scene.add(cubeMesh);
+const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+const cubeBody = new CANNON.Body({ mass: 1 });
+cubeBody.addShape(cubeShape);
+cubeBody.position.x = cubeMesh.position.x;
+cubeBody.position.y = cubeMesh.position.y;
+cubeBody.position.z = cubeMesh.position.z;
+world.addBody(cubeBody);
+
+// пол
+const planeGeometry = new THREE.PlaneGeometry(25, 25);
+const planeMesh = new THREE.Mesh(
+  planeGeometry,
   new THREE.MeshStandardMaterial({
     map: diffuse,
     normalMap: normal,
     roughnessMap: rough,
   })
 );
-plane.receiveShadow = true;
-plane.rotation.x = -Math.PI * 0.5;
-plane.position.y = -0.5;
-
-scene.add(plane);
+planeMesh.rotateX(-Math.PI / 2);
+planeMesh.receiveShadow = true;
+scene.add(planeMesh);
+const planeShape = new CANNON.Plane();
+const planeBody = new CANNON.Body({ mass: 0 });
+planeBody.addShape(planeShape);
+planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+world.addBody(planeBody);
 
 const sizes = {
   width: window.innerWidth,
@@ -152,10 +178,26 @@ renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 // Анимация
 const clock = new THREE.Clock();
+let delta;
 
 const tick = () => {
   // обновляем камеру
   controls.update();
+
+  delta = Math.min(clock.getDelta(), 0.1);
+  world.step(delta);
+
+  cubeMesh.position.set(
+    cubeBody.position.x,
+    cubeBody.position.y,
+    cubeBody.position.z
+  );
+  cubeMesh.quaternion.set(
+    cubeBody.quaternion.x,
+    cubeBody.quaternion.y,
+    cubeBody.quaternion.z,
+    cubeBody.quaternion.w
+  );
 
   // рендер сцены
   renderer.render(scene, camera);
