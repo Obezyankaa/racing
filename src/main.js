@@ -1,12 +1,16 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import CannonDebugger from "cannon-es-debugger";
+import GUI from "lil-gui";
 import { RectAreaLightHelper } from "three/examples/jsm/Addons.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
+const gui = new GUI();
+const debugObject = {};
+
 const canvas = document.querySelector("canvas.webgl");
 const scene = new THREE.Scene();
-
 /**
  * Физика
  */
@@ -15,6 +19,9 @@ const world = new CANNON.World();
 world.broadphase = new CANNON.SAPBroadphase(world);
 world.allowSleep = true;
 world.gravity.set(0, -9.82, 0);
+const defaultMaterial = new CANNON.Material("default");
+
+// const cannonDebugger = new CannonDebugger(scene, world, {});
 
 /**
  * Модель
@@ -63,62 +70,123 @@ rough.repeat.set(4, 4);
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(0, 1, 0); //default; light shining from top
-light.castShadow = true; // default false
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(5, 10, 5); //default; light shining from top
+directionalLight.castShadow = true;
 
-//Set up shadow properties for the light
-light.shadow.mapSize.width = 512; // default
-light.shadow.mapSize.height = 512; // default
-light.shadow.camera.near = 1; // default
-light.shadow.camera.far = 6; // default
-scene.add(light);
+directionalLight.shadow.mapSize.width = 512; // default
+directionalLight.shadow.mapSize.height = 512; // default
+directionalLight.shadow.camera.near = 0.5; // default
+directionalLight.shadow.camera.far = 20; // default
+scene.add(directionalLight);
 
-// const width = 1;
-// const height = 4;
-// const intensity = 1;
-// const rectLight = new THREE.RectAreaLight(0xffffff, intensity, width, height);
-// rectLight.position.set(3, 1, 1);
-// rectLight.lookAt(0, 0, 0);
-// scene.add(rectLight);
+//Create a helper for the shadow camera (optional)
+const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
+scene.add(helper);
 
-// const rectLightHelper = new RectAreaLightHelper(rectLight);
-// rectLight.add(rectLightHelper);
+// Объект с параметрами, которые будем менять через GUI
+const debugLight = {
+  showHelper: true, // ← helper включён по умолчанию
+  color: directionalLight.color.getHex(),
+  intensity: directionalLight.intensity,
+  x: directionalLight.position.x,
+  y: directionalLight.position.y,
+  z: directionalLight.position.z,
+};
+
+const lightFolder = gui.addFolder("💡 Свет");
+const oneFolder = lightFolder.addFolder("directionalLight");
+
+// включить helper
+oneFolder
+  .add(debugLight, "showHelper")
+  .name("Показать Helper")
+  .onChange((val) => {
+    helper.visible = val;
+  });
+
+// Интенсивность света
+oneFolder
+  .add(directionalLight, "intensity")
+  .min(0)
+  .max(2)
+  .step(0.01)
+  .name("Интенсивность");
+
+// Цвет света
+oneFolder
+  .addColor(debugLight, "color")
+  .name("Цвет")
+  .onChange((value) => {
+    directionalLight.color.set(value);
+  });
+
+// Положение источника света
+oneFolder
+  .add(debugLight, "x", -20, 20)
+  .step(0.1)
+  .name("X")
+  .onChange((v) => {
+    directionalLight.position.x = v;
+  });
+oneFolder
+  .add(debugLight, "y", -20, 20)
+  .step(0.1)
+  .name("Y")
+  .onChange((v) => {
+    directionalLight.position.y = v;
+  });
+oneFolder
+  .add(debugLight, "z", -20, 20)
+  .step(0.1)
+  .name("Z")
+  .onChange((v) => {
+    directionalLight.position.z = v;
+  });
 
 /**
  * Объекты на рендере
  */
-const material = new THREE.MeshStandardMaterial();
-material.roughness = 0.7;
 
 // фигруа
-const normalMaterial = new THREE.MeshNormalMaterial();
-const phongMaterial = new THREE.MeshPhongMaterial();
-
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-const cubeMesh = new THREE.Mesh(cubeGeometry, normalMaterial);
-cubeMesh.position.x = -3;
-cubeMesh.position.y = 3;
-cubeMesh.castShadow = true;
-scene.add(cubeMesh);
+const sphereGeometry = new THREE.BoxGeometry(1, 1, 1);
+const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+sphere.position.x = 0;
+sphere.position.y = 2;
+sphere.castShadow = true; //default is false
+sphere.receiveShadow = false; //default
+scene.add(sphere);
 const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
 const cubeBody = new CANNON.Body({ mass: 1 });
 cubeBody.addShape(cubeShape);
-cubeBody.position.x = cubeMesh.position.x;
-cubeBody.position.y = cubeMesh.position.y;
-cubeBody.position.z = cubeMesh.position.z;
+cubeBody.position.x = sphere.position.x;
+cubeBody.position.y = sphere.position.y;
+cubeBody.position.z = sphere.position.z;
 world.addBody(cubeBody);
 
-// пол
-const planeGeometry = new THREE.PlaneGeometry(25, 25);
-const planeMesh = new THREE.Mesh(
-  planeGeometry,
-  new THREE.MeshStandardMaterial({
-    map: diffuse,
-    normalMap: normal,
-    roughnessMap: rough,
-  })
+// Материал для тел
+
+// Свойства столкновений
+const defaultContactMaterial = new CANNON.ContactMaterial(
+  defaultMaterial,
+  defaultMaterial,
+  {
+    friction: 0.1, // Трение
+    restitution: 0.9, // Упругость
+  }
 );
+world.addContactMaterial(defaultContactMaterial);
+world.defaultContactMaterial = defaultContactMaterial;
+
+// пол
+const planeGeometry = new THREE.PlaneGeometry(20, 20, 32, 32);
+const planeMaterial = new THREE.MeshStandardMaterial({
+  map: diffuse,
+  normalMap: normal,
+  roughnessMap: rough,
+});
+const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
 planeMesh.rotateX(-Math.PI / 2);
 planeMesh.receiveShadow = true;
 scene.add(planeMesh);
@@ -158,9 +226,9 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   100
 );
-camera.position.x = 1;
-camera.position.y = 1;
-camera.position.z = 2;
+camera.position.x = 2;
+camera.position.y = 2;
+camera.position.z = 3;
 scene.add(camera);
 
 // контроль камеры
@@ -183,22 +251,25 @@ let delta;
 const tick = () => {
   // обновляем камеру
   controls.update();
+  helper.update();
 
   delta = Math.min(clock.getDelta(), 0.1);
   world.step(delta);
 
-  cubeMesh.position.set(
+  sphere.position.set(
     cubeBody.position.x,
     cubeBody.position.y,
     cubeBody.position.z
   );
-  cubeMesh.quaternion.set(
+  sphere.quaternion.set(
     cubeBody.quaternion.x,
     cubeBody.quaternion.y,
     cubeBody.quaternion.z,
     cubeBody.quaternion.w
   );
 
+  // для отклатки
+  // cannonDebugger.update();
   // рендер сцены
   renderer.render(scene, camera);
 
