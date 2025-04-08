@@ -21,7 +21,7 @@ world.allowSleep = true;
 world.gravity.set(0, -9.82, 0);
 const defaultMaterial = new CANNON.Material("default");
 
-// const cannonDebugger = new CannonDebugger(scene, world, {});
+const cannonDebugger = new CannonDebugger(scene, world, {});
 
 /**
  * Модель
@@ -145,25 +145,87 @@ oneFolder
   });
 
 /**
+* Машина 
+*/
+const carBody = new CANNON.Body({
+  mass: 150,
+  position: new CANNON.Vec3(0, 6, 0),
+  shape: new CANNON.Box(new CANNON.Vec3(4,0.5,2))
+}) 
+
+const vehicle = new CANNON.RigidVehicle({
+  chassisBody: carBody
+})
+
+const mass = 1;
+const axisWidth = 5;
+const wheelShape = new CANNON.Sphere(1);
+const wheelMaterial = new CANNON.Material("wheel");
+const down = new CANNON.Vec3(0, -1, 0);
+
+const wheelBody1 = new CANNON.Body({ mass, material: wheelMaterial });
+wheelBody1.addShape(wheelShape);
+wheelBody1.angularDamping = 0.4;
+vehicle.addWheel({
+  body: wheelBody1,
+  position: new CANNON.Vec3(-2, 0, axisWidth / 2),
+  axis: new CANNON.Vec3(0, 0, 1),
+  direction: down,
+});
+
+const wheelBody2 = new CANNON.Body({ mass, material: wheelMaterial });
+wheelBody2.addShape(wheelShape);
+wheelBody2.angularDamping = 0.4;
+vehicle.addWheel({
+  body: wheelBody2,
+  position: new CANNON.Vec3(-2, 0, -axisWidth / 2),
+  axis: new CANNON.Vec3(0, 0, 1),
+  direction: down,
+})
+
+const wheelBody3 = new CANNON.Body({ mass, material: wheelMaterial });
+wheelBody3.addShape(wheelShape);
+wheelBody3.angularDamping = 0.4;
+vehicle.addWheel({
+  body: wheelBody3,
+  position: new CANNON.Vec3(2, 0, axisWidth / 2),
+  axis: new CANNON.Vec3(0, 0, 1),
+  direction: down,
+});
+
+
+const wheelBody4 = new CANNON.Body({ mass, material: wheelMaterial });
+wheelBody4.addShape(wheelShape);
+wheelBody4.angularDamping = 0.4;
+vehicle.addWheel({
+  body: wheelBody4,
+  position: new CANNON.Vec3(2, 0, -axisWidth / 2),
+  axis: new CANNON.Vec3(0, 0, 1),
+  direction: down,
+});
+
+vehicle.addToWorld(world);
+
+/**
  * Объекты на рендере
  */
 
 // фигруа
-const sphereGeometry = new THREE.BoxGeometry(1, 1, 1);
-const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-sphere.position.x = 0;
-sphere.position.y = 2;
-sphere.castShadow = true; //default is false
-sphere.receiveShadow = false; //default
-scene.add(sphere);
-const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-const cubeBody = new CANNON.Body({ mass: 1 });
-cubeBody.addShape(cubeShape);
-cubeBody.position.x = sphere.position.x;
-cubeBody.position.y = sphere.position.y;
-cubeBody.position.z = sphere.position.z;
-world.addBody(cubeBody);
+// const sphereGeometry = new THREE.BoxGeometry(1, 1, 1);
+// const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+// const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+// sphere.position.x = 0;
+// sphere.position.y = 2;
+// sphere.castShadow = true; //default is false
+// sphere.receiveShadow = false; //default
+// scene.add(sphere);
+// const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
+// const cubeBody = new CANNON.Body({ mass: 1 });
+// cubeBody.addShape(cubeShape);
+// cubeBody.position.x = sphere.position.x;
+// cubeBody.position.y = sphere.position.y;
+// cubeBody.position.z = sphere.position.z;
+// world.addBody(cubeBody);
 
 // Материал для тел
 
@@ -173,7 +235,7 @@ const defaultContactMaterial = new CANNON.ContactMaterial(
   defaultMaterial,
   {
     friction: 0.1, // Трение
-    restitution: 0.9, // Упругость
+    restitution: 0.3, // Упругость
   }
 );
 world.addContactMaterial(defaultContactMaterial);
@@ -256,20 +318,80 @@ const tick = () => {
   delta = Math.min(clock.getDelta(), 0.1);
   world.step(delta);
 
-  sphere.position.set(
-    cubeBody.position.x,
-    cubeBody.position.y,
-    cubeBody.position.z
-  );
-  sphere.quaternion.set(
-    cubeBody.quaternion.x,
-    cubeBody.quaternion.y,
-    cubeBody.quaternion.z,
-    cubeBody.quaternion.w
-  );
+  // sphere.position.set(
+  //   cubeBody.position.x,
+  //   cubeBody.position.y,
+  //   cubeBody.position.z
+  // );
+  // sphere.quaternion.set(
+  //   cubeBody.quaternion.x,
+  //   cubeBody.quaternion.y,
+  //   cubeBody.quaternion.z,
+  //   cubeBody.quaternion.w
+  // );
+
+   document.addEventListener("keydown", (event) => {
+      const maxSteerVal = 0.5;
+      const maxForce = 1000;
+
+     switch (event.key) {
+       case "w":
+       case "ArrowUp":
+         vehicle.setWheelForce(maxForce, 0);
+         vehicle.setWheelForce(maxForce, 1);
+         break;
+
+       case "s":
+       case "ArrowDown":
+         vehicle.setWheelForce(-maxForce / 2, 0);
+         vehicle.setWheelForce(-maxForce / 2, 1);
+         break;
+
+       case "a":
+       case "ArrowLeft":
+         vehicle.setSteeringValue(maxSteerVal, 0);
+         vehicle.setSteeringValue(maxSteerVal, 1);
+         break;
+
+       case "d":
+       case "ArrowRight":
+         vehicle.setSteeringValue(-maxSteerVal, 0);
+         vehicle.setSteeringValue(-maxSteerVal, 1);
+         break;
+     }
+   });
+
+   // reset car force to zero when key is released
+   document.addEventListener("keyup", (event) => {
+     switch (event.key) {
+       case "w":
+       case "ArrowUp":
+         vehicle.setWheelForce(0, 0);
+         vehicle.setWheelForce(0, 1);
+         break;
+
+       case "s":
+       case "ArrowDown":
+         vehicle.setWheelForce(0, 0);
+         vehicle.setWheelForce(0, 1);
+         break;
+
+       case "a":
+       case "ArrowLeft":
+         vehicle.setSteeringValue(0, 0);
+         vehicle.setSteeringValue(0, 1);
+         break;
+
+       case "d":
+       case "ArrowRight":
+         vehicle.setSteeringValue(0, 0);
+         vehicle.setSteeringValue(0, 1);
+         break;
+     }
+   });
 
   // для отклатки
-  // cannonDebugger.update();
+  cannonDebugger.update();
   // рендер сцены
   renderer.render(scene, camera);
 
