@@ -1,7 +1,10 @@
 // World.js
+import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import CannonDebugger from "cannon-es-debugger";
 import Car from "../components/Car";
+import Box from "../components/Box";
+import Lights from "../components/Lights";
 
 export default class World {
   constructor(scene) {
@@ -12,13 +15,17 @@ export default class World {
     this.world.broadphase = new CANNON.SAPBroadphase(this.world);
     this.world.allowSleep = true;
 
-    this.cannonDebugger = new CannonDebugger(this.scene, this.world, {});
+    // ✅ Добавляем свет
+    this.lights = new Lights(this.scene);
 
+    this.box = new Box(this.scene, new THREE.Vector3(0, 2, 0));
+    this.cannonDebugger = new CannonDebugger(this.scene, this.world, {});
     // this.setMaterials();
     this.createFloor();
     this.createVehicle();
   }
 
+  
   //   setMaterials() {
   //     const defaultMaterial = new CANNON.Material("default");
   //     const defaultContactMaterial = new CANNON.ContactMaterial(
@@ -47,7 +54,6 @@ export default class World {
   createVehicle() {
     // сюда можно вынести код создания автомобиля
     // в дальнейшем перенесем это в отдельный Car.js
-
     this.car = new Car(this.world);
     
     window.addEventListener("keydown", (e) => {
