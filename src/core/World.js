@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import CannonDebugger from "cannon-es-debugger";
-import Car from "../components/Car";
+import Car from "../components/car/Car";
 import Box from "../components/Box";
 import Asphalt from "../components/Asphalt";
 import Lights from "../components/Lights";
@@ -30,12 +30,31 @@ export default class World {
 
   createFloor() {
     const planeShape = new CANNON.Plane();
+    const groundMaterial = new CANNON.Material("ground");
     const planeBody = new CANNON.Body({ mass: 0 });
+    planeBody.material = groundMaterial;
     planeBody.addShape(planeShape);
     planeBody.quaternion.setFromAxisAngle(
       new CANNON.Vec3(1, 0, 0),
       -Math.PI / 2
     );
+
+    // 2. Добавь ContactMaterial между колёсами и полом
+    const wheelMaterial = new CANNON.Material("wheel");
+
+    // friction = трение, restitution = упругость
+    const contactMaterial = new CANNON.ContactMaterial(
+      groundMaterial,
+      wheelMaterial,
+      {
+        friction: 0.6, // зависит от нужного сцепления
+        restitution: 0.0, // ноль = не отскакивает
+      }
+    );
+
+    // 3. Добавляем в физический мир
+    this.world.addContactMaterial(contactMaterial);
+
     this.world.addBody(planeBody);
   }
 

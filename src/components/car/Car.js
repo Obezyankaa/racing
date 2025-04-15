@@ -6,7 +6,7 @@ export default class Car {
 
     // Шасси машины
     this.chassisBody = new CANNON.Body({
-      mass: 150,
+      mass: 500,
       position: new CANNON.Vec3(0, 6, 0),
       shape: new CANNON.Box(new CANNON.Vec3(2, 0.5, 1)), // уменьшено для реалистичного размера
     });
@@ -17,22 +17,23 @@ export default class Car {
       chassisBody: this.chassisBody,
     });
 
-    // Параметры колёс
-    const wheelOptions = {
-      radius: 0.5,
-      directionLocal: new CANNON.Vec3(0, -1, 0),
-      suspensionStiffness: 30,
-      suspensionRestLength: 0.4,
-      frictionSlip: 1.4,
-      dampingRelaxation: 2.3,
-      dampingCompression: 4.4,
-      maxSuspensionForce: 100000,
-      rollInfluence: 0.01,
-      axleLocal: new CANNON.Vec3(0, 0, 1),
-      maxSuspensionTravel: 0.3,
-      customSlidingRotationalSpeed: -30,
-      useCustomSlidingRotationalSpeed: true,
-    };
+    // Параметры колёс ⚙️ wheelOptions 
+
+  const wheelOptions = {
+    radius: 0.5,
+    directionLocal: new CANNON.Vec3(0, -1, 0),
+    suspensionStiffness: 30,
+    suspensionRestLength: 0.35,
+    frictionSlip: 1.8,
+    dampingRelaxation: 2.5,
+    dampingCompression: 4.5,
+    maxSuspensionForce: 100000,
+    rollInfluence: 0.01,
+    axleLocal: new CANNON.Vec3(0, 0, 1),
+    maxSuspensionTravel: 0.25,
+    customSlidingRotationalSpeed: -30,
+    useCustomSlidingRotationalSpeed: true,
+  };
 
     // 4 колеса
     const positions = [
@@ -65,13 +66,14 @@ export default class Car {
         20
       );
       const wheelBody = new CANNON.Body({
-        mass: 0,
+        mass: 2,
         material: wheelMaterial,
         type: CANNON.Body.KINEMATIC,
       });
 
       // отключаем коллизии
       wheelBody.collisionFilterGroup = 0;
+      wheelBody.angularDamping = 0.4;
 
       // повернём цилиндр в нужную ориентацию
       const q = new CANNON.Quaternion().setFromEuler(-Math.PI / 2, 0, 0);
