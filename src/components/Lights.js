@@ -1,6 +1,9 @@
-// components/Lights.js
 import * as THREE from "three";
 import GUI from "../utils/GUI";
+
+const obj = {
+  turnOnHelper: false,
+};
 
 export default class Lights {
   constructor(scene) {
@@ -19,14 +22,29 @@ export default class Lights {
     directionalLight.shadow.camera.far = 20;
 
     scene.add(directionalLight);
-    const folder = GUI.addFolder("Свет");
-      
-    
-    // 👁️ Камера-хелпер (опционально)
+
+    // 👁️ CameraHelper
     const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
+    helper.visible = obj.turnOnHelper; 
     scene.add(helper);
 
-    // сохраняем, если нужно потом менять из GUI
+    // GUI
+    const folder = GUI.addFolder("Свет");
+    folder
+      .add(obj, "turnOnHelper")
+      .name("Хелпер тени")
+      .onChange((value) => {
+        helper.visible = value;
+      });
+    
+    // folder.add(directionalLight, "intensity", 0, 2).name("Интенсивность");
+    // folder
+    //   .addColor({ color: "#ffffff" }, "color")
+    //   .name("Цвет света")
+    //   .onChange((value) => directionalLight.color.set(value));
+
+
+    // Сохраняем ссылки
     this.ambientLight = ambientLight;
     this.directionalLight = directionalLight;
     this.helper = helper;

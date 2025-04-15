@@ -19,7 +19,7 @@ export default class App {
       0.1,
       100
     );
-    this.camera.position.set(2, 2, 3);
+    this.camera.position.set(-6, 5, 5);
     this.scene.add(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
@@ -31,7 +31,7 @@ export default class App {
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
 
-    this.world = new World(this.scene);
+    this.world = new World(this.scene, this.camera);
 
     this.setResizeHandler();
     this.clock = new THREE.Clock();

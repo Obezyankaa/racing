@@ -10,12 +10,12 @@ export default class Car {
       position: new CANNON.Vec3(0, 6, 0),
       shape: new CANNON.Box(new CANNON.Vec3(2, 0.5, 1)), // уменьшено для реалистичного размера
     });
+    this.body = this.chassisBody;
 
     // Создание RaycastVehicle
     this.vehicle = new CANNON.RaycastVehicle({
       chassisBody: this.chassisBody,
     });
-
 
     // Параметры колёс
     const wheelOptions = {
@@ -43,17 +43,15 @@ export default class Car {
     ];
 
     positions.forEach((pos) => {
-     const options = {
-       ...wheelOptions, // копируем все настройки
-       chassisConnectionPointLocal: pos.clone(), // задаём текущую позицию
-     };
-     this.vehicle.addWheel(options);
-   });
+      const options = {
+        ...wheelOptions, // копируем все настройки
+        chassisConnectionPointLocal: pos.clone(), // задаём текущую позицию
+      };
+      this.vehicle.addWheel(options);
+    });
 
     // Добавление машины в физический мир
     this.vehicle.addToWorld(this.world);
-      console.log("Mass center:", this.chassisBody.position);
-      console.log("Inertia:", this.chassisBody.inertia);
 
     // Колёса для синхронизации (например, в THREE.js)
     this.wheelBodies = [];

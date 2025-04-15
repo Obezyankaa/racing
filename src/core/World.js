@@ -4,11 +4,13 @@ import * as CANNON from "cannon-es";
 import CannonDebugger from "cannon-es-debugger";
 import Car from "../components/Car";
 import Box from "../components/Box";
+import Asphalt from "../components/Asphalt";
 import Lights from "../components/Lights";
 
 export default class World {
-  constructor(scene) {
+  constructor(scene, camera) {
     this.scene = scene;
+    this.camera = camera;
 
     this.world = new CANNON.World();
     this.world.gravity.set(0, -9.82, 0);
@@ -18,27 +20,13 @@ export default class World {
     // ✅ Добавляем свет
     this.lights = new Lights(this.scene);
 
-    this.box = new Box(this.scene, new THREE.Vector3(0, 2, 0));
+    this.box = new Box(this.scene, new THREE.Vector3(0, 12, 0), this.world);
+    this.plane = new Asphalt(this.scene);
     this.cannonDebugger = new CannonDebugger(this.scene, this.world, {});
     // this.setMaterials();
     this.createFloor();
     this.createVehicle();
   }
-
-  
-  //   setMaterials() {
-  //     const defaultMaterial = new CANNON.Material("default");
-  //     const defaultContactMaterial = new CANNON.ContactMaterial(
-  //       defaultMaterial,
-  //       defaultMaterial,
-  //       {
-  //         friction: 0.1,
-  //         restitution: 0.3,
-  //       }
-  //     );
-  //     this.world.defaultContactMaterial = defaultContactMaterial;
-  //     this.world.addContactMaterial(defaultContactMaterial);
-  //   }
 
   createFloor() {
     const planeShape = new CANNON.Plane();
@@ -55,7 +43,7 @@ export default class World {
     // сюда можно вынести код создания автомобиля
     // в дальнейшем перенесем это в отдельный Car.js
     this.car = new Car(this.world);
-    
+
     window.addEventListener("keydown", (e) => {
       this.car.handleInput(e.key, true);
     });
@@ -64,9 +52,37 @@ export default class World {
     });
   }
 
+  // этот метод нужен для смены позицы камеры во время движения авто
+  // updateCameraFollowCar() {
+  //   if (!this.car) return;
+
+  //   const carBody = this.car.body; // ✅ теперь используем правильно
+
+  //   // Позиция машины
+  //   const carPos = new THREE.Vector3(
+  //     carBody.position.x,
+  //     carBody.position.y,
+  //     carBody.position.z
+  //   );
+
+  //   // Постоянное смещение камеры (например, чуть сзади и выше)
+  //   const offset = new THREE.Vector3(-6, 5, 5);
+
+  //   // Получаем позицию камеры = позиция машины + смещение
+  //   const desiredCameraPos = carPos.clone().add(offset);
+
+  //   // Обновляем позицию камеры (можно с плавностью)
+  //   this.camera.position.lerp(desiredCameraPos, 0.1);
+
+  //   // Камера смотрит на машину
+  //   this.camera.lookAt(carPos);
+  // }
+
   update(delta) {
     this.world.step(delta);
+    // this.updateCameraFollowCar();
     this.cannonDebugger.update();
     this.car.update();
+    this.box.update();
   }
 }
