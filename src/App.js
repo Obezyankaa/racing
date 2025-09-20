@@ -1,7 +1,7 @@
 // App.js
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import World from "./World.js";
+import World from "./components/World.js";
 
 export default class App {
   constructor(canvas) {

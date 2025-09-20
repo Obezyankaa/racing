@@ -1,4 +1,3 @@
-// main.js
-import App from "./core/App.js";
+import App from "./App.js";
 const canvas = document.querySelector("canvas.webgl");
-const app = new App(canvas);
+new App(canvas);
