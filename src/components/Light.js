@@ -30,10 +30,10 @@ export default class Light {
     this.spotLight.shadow.camera.near = 1;
     this.spotLight.shadow.camera.far = 10;
     this.spotLight.shadow.focus = 1;
-    scene.add(this.spotLight);
+    // this.scene.add(this.spotLight);
 
     this.lightHelper = new THREE.SpotLightHelper(this.spotLight);
-    scene.add(this.lightHelper);
+    // scene.add(this.lightHelper);
 
     const params = {
       color: this.spotLight.color.getHex(),
@@ -98,14 +98,21 @@ export default class Light {
 
     folder.open();
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    this.scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(5, 10, 5);
+    dirLight.castShadow = true;
+    this.scene.add(dirLight);
+
   }
 
   update() {
     // пример анимации
-    const t = performance.now() / 3000;
-    this.spotLight.position.x = Math.cos(t) * 2.5;
-    this.spotLight.position.z = Math.sin(t) * 2.5;
+    // const t = performance.now() / 3000;
+    // this.spotLight.position.x = Math.cos(t) * 2.5;
+    // this.spotLight.position.z = Math.sin(t) * 2.5;
 
     // // helper должен обновляться каждый кадр, если что-то двигается
     this.lightHelper.update();

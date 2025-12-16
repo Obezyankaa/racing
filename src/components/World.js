@@ -12,7 +12,7 @@ export default class World {
     // ✅ Добавляем свет
     this.plane = new Floor(this.scene);
     this.lights = new Light(this.scene);
-    this.box = new Box(this.scene);
+    // this.box = new Box(this.scene);
 
     if (this.lights && this.lights.spotLight) {
       this.lights.spotLight.target = this.plane.plane; // цель — сам пол
@@ -34,7 +34,6 @@ export default class World {
 
   update(delta) {
     this.lights?.update();
-    this.box.animation(delta);
     this.world.step(delta);
   }
 }
