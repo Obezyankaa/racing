@@ -1,19 +1,9 @@
 import * as THREE from "three";
-import GUI from "lil-gui";
-
-// const obj = {
-//   myBoolean: false,
-//   position: {
-//     x: 5,
-//     y: 10,
-//     z: 5,
-//   },
-// };
 
 export default class Light {
-  constructor(scene) {
+  constructor(scene, { debugUI = null } = {}) {
     this.scene = scene;
-    this.gui = new GUI();
+    this.debugUI = debugUI;
 
     // основной свет (SpotLight)
     this.spotLight = new THREE.SpotLight(0xffffff, 100);
@@ -35,68 +25,68 @@ export default class Light {
     this.lightHelper = new THREE.SpotLightHelper(this.spotLight);
     // scene.add(this.lightHelper);
 
-    const params = {
-      color: this.spotLight.color.getHex(),
-      intensity: this.spotLight.intensity,
-      distance: this.spotLight.distance,
-      angle: this.spotLight.angle,
-      penumbra: this.spotLight.penumbra,
-      decay: this.spotLight.decay,
-      focus: this.spotLight.shadow.focus,
-      shadows: true,
-      position: {
-        positionX: 0,
-        positionY: 0,
-        positionZ: 0,
-      },
-    };
+    const folder = this.debugUI?.addFolder("SpotLight");
 
-    const folder = this.gui.addFolder("SpotLight");
+    if (folder) {
+      const params = {
+        color: this.spotLight.color.getHex(),
+        intensity: this.spotLight.intensity,
+        distance: this.spotLight.distance,
+        angle: this.spotLight.angle,
+        penumbra: this.spotLight.penumbra,
+        decay: this.spotLight.decay,
+        focus: this.spotLight.shadow.focus,
+        shadows: true,
+        position: {
+          positionX: this.spotLight.position.x,
+          positionY: this.spotLight.position.y,
+          positionZ: this.spotLight.position.z,
+        },
+      };
 
-    folder.addColor(params, "color").onChange((value) => {
-      this.spotLight.color.setHex(value);
-    });
+      folder.addColor(params, "color").onChange((value) => {
+        this.spotLight.color.setHex(value);
+      });
 
-    folder.add(params, "intensity", 0, 500).onChange((value) => {
-      console.log(value);
-      this.spotLight.intensity = value;
-    });
+      folder.add(params, "intensity", 0, 500).onChange((value) => {
+        console.log(value);
+        this.spotLight.intensity = value;
+      });
 
-    folder.add(params, "distance", 0, 20).onChange((val) => {
-      this.spotLight.distance = val;
-    });
+      folder.add(params, "distance", 0, 20).onChange((val) => {
+        this.spotLight.distance = val;
+      });
 
-    folder.add(params, "angle", 0, Math.PI / 3).onChange((val) => {
-      this.spotLight.angle = val;
-    });
+      folder.add(params, "angle", 0, Math.PI / 3).onChange((val) => {
+        this.spotLight.angle = val;
+      });
 
-    folder.add(params, "penumbra", 0, 1).onChange((val) => {
-      this.spotLight.penumbra = val;
-    });
+      folder.add(params, "penumbra", 0, 1).onChange((val) => {
+        this.spotLight.penumbra = val;
+      });
 
-    folder.add(params, "decay", 1, 2).onChange((val) => {
-      this.spotLight.decay = val;
-    });
+      folder.add(params, "decay", 1, 2).onChange((val) => {
+        this.spotLight.decay = val;
+      });
 
-    folder.add(params, "focus", 0, 1).onChange((val) => {
-      this.spotLight.shadow.focus = val;
-    });
+      folder.add(params, "focus", 0, 1).onChange((val) => {
+        this.spotLight.shadow.focus = val;
+      });
 
-    folder.add(params.position, "positionX", -10, 10).onChange((val) => {
-      this.spotLight.position.x = val
-    });
+      folder.add(params.position, "positionX", -10, 10).onChange((val) => {
+        this.spotLight.position.x = val;
+      });
 
       folder.add(params.position, "positionY", -10, 10).onChange((val) => {
         this.spotLight.position.y = val;
       });
-    
+
       folder.add(params.position, "positionZ", -10, 10).onChange((val) => {
         this.spotLight.position.z = val;
       });
 
-
-
-    folder.close();
+      folder.close();
+    }
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambientLight);

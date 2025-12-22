@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
+let lampPostCount = 0;
 
 export default class LampPost {
   constructor(scene, options = {}) {
@@ -14,7 +15,13 @@ export default class LampPost {
       modelUrl = "/static/model/lamppost/scene.gltf",
       onLoad = null,
       onError = null,
+      debugUI = null,
+      debugLabel = null,
     } = options;
+
+    this.debugUI = debugUI;
+    lampPostCount += 1;
+    this.debugLabel = debugLabel || `LampPost ${lampPostCount}`;
 
     this.group = new THREE.Group();
     this.group.position.copy(position);
@@ -87,20 +94,19 @@ export default class LampPost {
 
   _addLight() {
     const light = new THREE.SpotLight(
-      0xffeecc, // тёплый цвет
-      10, // интенсивность
-      15, // дистанция
-      Math.PI / 5, // угол
-      0.4, // penumbra
+      0xffeecc, // color
+      50, // intensity
+      12, // distance
+      Math.PI / 5, // angle
+      0.6, // penumbra
       1 // decay
     );
 
     // позиция лампы (где лампочка)
-    light.position.set(5, 3, 0);
-
+    light.position.set(-0.08, 5.35, 1);
     // цель — куда светит
     const target = new THREE.Object3D();
-    target.position.set(0, 0, 0);
+    target.position.set(0, -80, 30);
 
     this.group.add(light);
     this.group.add(target);
@@ -109,12 +115,76 @@ export default class LampPost {
 
     light.castShadow = true;
 
+    this.spotLight = light;
     this.lightHelper = new THREE.SpotLightHelper(light);
     this.scene.add(this.lightHelper);
+
+    this._setupLightGui();
+  }
+
+  _setupLightGui() {
+    if (!this.debugUI || !this.spotLight) return;
+
+    const folder = this.debugUI.addFolder(`${this.debugLabel} Light`);
+    const params = {
+      color: this.spotLight.color.getHex(),
+      intensity: this.spotLight.intensity,
+      distance: this.spotLight.distance,
+      angle: this.spotLight.angle,
+      penumbra: this.spotLight.penumbra,
+      decay: this.spotLight.decay,
+      focus: this.spotLight.shadow.focus,
+      position: {
+        positionX: this.spotLight.position.x,
+        positionY: this.spotLight.position.y,
+        positionZ: this.spotLight.position.z,
+      },
+    };
+
+    folder.addColor(params, "color").onChange((value) => {
+      this.spotLight.color.setHex(value);
+    });
+
+    folder.add(params, "intensity", 0, 50).onChange((value) => {
+      this.spotLight.intensity = value;
+    });
+
+    folder.add(params, "distance", 0, 50).onChange((val) => {
+      this.spotLight.distance = val;
+    });
+
+    folder.add(params, "angle", 0, Math.PI / 2).onChange((val) => {
+      this.spotLight.angle = val;
+    });
+
+    folder.add(params, "penumbra", 0, 1).onChange((val) => {
+      this.spotLight.penumbra = val;
+    });
+
+    folder.add(params, "decay", 1, 2).onChange((val) => {
+      this.spotLight.decay = val;
+    });
+
+    folder.add(params, "focus", 0, 1).onChange((val) => {
+      this.spotLight.shadow.focus = val;
+    });
+
+    folder.add(params.position, "positionX", -10, 10).onChange((val) => {
+      this.spotLight.position.x = val;
+    });
+
+    folder.add(params.position, "positionY", -10, 10).onChange((val) => {
+      this.spotLight.position.y = val;
+    });
+
+    folder.add(params.position, "positionZ", -10, 10).onChange((val) => {
+      this.spotLight.position.z = val;
+    });
+    
+    folder.close();
   }
 
   update() {
     this.lightHelper?.update();
   }
 }
-

@@ -56,7 +56,7 @@ export default class Floor {
     /**
      * Геометрия
      */
-    this.geometry = new THREE.PlaneGeometry(20, 20);
+    this.geometry = new THREE.PlaneGeometry(30, 30);
 
     /**
      * Материалы
