@@ -96,7 +96,7 @@ export default class Light {
 
 
 
-    folder.open();
+    folder.close();
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambientLight);
@@ -104,7 +104,7 @@ export default class Light {
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(5, 10, 5);
     dirLight.castShadow = true;
-    this.scene.add(dirLight);
+    // this.scene.add(dirLight);
 
   }
 

@@ -22,7 +22,8 @@
     "cannon-es": "^0.20.0",
     "cannon-es-debugger": "^1.0.0",
     "three": "^0.175.0",
-    "vite-plugin-restart": "^0.4.2"
+    "vite-plugin-restart": "^0.4.2",
+    "vite-plugin-static-copy": "^3.1.4"
   },
   "main": "vite.config.js",
   "description": "it's solo project",
