@@ -114,9 +114,11 @@ export default class LampPost {
     light.target = target;
 
     light.castShadow = true;
+    light.visible = false;
 
     this.spotLight = light;
     this.lightHelper = new THREE.SpotLightHelper(light);
+     this.lightHelper.visible = this.spotLight.visible;
     this.scene.add(this.lightHelper);
 
     this._setupLightGui();
@@ -139,7 +141,13 @@ export default class LampPost {
         positionY: this.spotLight.position.y,
         positionZ: this.spotLight.position.z,
       },
+      enabled: this.spotLight.visible,
     };
+
+      folder.add(params, "enabled").onChange((value) => {
+        this.spotLight.visible = value;
+        this.lightHelper.visible = value;
+      });
 
     folder.addColor(params, "color").onChange((value) => {
       this.spotLight.color.setHex(value);

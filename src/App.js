@@ -19,7 +19,7 @@ export default class App {
       0.1,
       100
     );
-    this.camera.position.set(-6, 15, 15);
+    this.camera.position.set(-3, 4, 5);
     this.scene.add(this.camera);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });

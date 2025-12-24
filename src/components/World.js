@@ -1,11 +1,15 @@
 import * as THREE from "three";
-// import * as CANNON from "cannon-es";
+import * as CANNON from "cannon-es";
+import CannonDebugger from "cannon-es-debugger";
+
+import DebugGUI from "../utils/DebugGUI.js";
+
 import Light from "./Light.js";
-import Box from "./Box.js";
 import Floor from "./Floor.js";
 import LampPost from "./LampPost.js";
 import ConcreteBlock from "./ConcreteBlock.js";
-import DebugGUI from "../utils/DebugGUI.js";
+import Car from "./Car.js";
+
 
 export default class World {
   constructor(scene, camera) {
@@ -17,7 +21,6 @@ export default class World {
     // ✅ Добавляем свет
     this.plane = new Floor(this.scene);
     this.lights = new Light(this.scene, { debugUI: this.debugUI });
-    // this.box = new Box(this.scene);
     /**
      * Туман
      */
@@ -36,23 +39,56 @@ export default class World {
     // Беттоные блоки добавляем
     this._addConcreteBlock();
 
-    // this.world = new CANNON.World({
-    //   gravity: new CANNON.Vec3(0, -9.82, 0), // m/s²
-    // });
+    this.world = new CANNON.World({
+      gravity: new CANNON.Vec3(0, -9.82, 0), // m/s²
+    });
+    this.fixedTimeStep = 1 / 60;
+    this.maxSubSteps = 3;
 
-    // const radius = 1; // m
-    // const sphereBody = new CANNON.Body({
-    //   mass: 5, // kg
-    //   shape: new CANNON.Sphere(radius),
-    // });
-    // sphereBody.position.set(0, 10, 0); // m
-    // this.world.addBody(sphereBody);
+    this.cannonDebugger = CannonDebugger(this.scene, this.world, {
+      color: 0x00ff00, // цвет линий
+    });
+
+    // const asphaltMaterial = new CANNON.Material("asphalt");
+    // const ballMaterial = new CANNON.Material("ball");
+    // const asphaltBallContact = new CANNON.ContactMaterial(
+    //   asphaltMaterial,
+    // ballMaterial,
+    //   {
+    //     friction: 0.6,
+    //     restitution: 0.5,
+    //   }
+    // );
+    // this.world.addContactMaterial(asphaltBallContact);
+
+    const groundShape = new CANNON.Box(
+      new CANNON.Vec3(15, 0.1, 15) // половины размеров
+    );
+
+    const groundBody = new CANNON.Body({
+      type: CANNON.Body.STATIC,
+      shape: groundShape,
+      // material: asphaltMaterial,
+    });
+
+    groundBody.position.set(0, -0.1, 0);
+    this.world.addBody(groundBody);
+    // groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0); // make it face up
+    // this.world.addBody(groundBody);
+
+    // ✅ Добавляем машину
+    this.car = new Car(this.scene);
+    this.world.addBody(this.car.body);
+    this.car.vehicle.addToWorld(this.world);
   }
 
+  
   update(delta) {
     this.lights?.update();
     this.lampPosts?.forEach((lamp) => lamp.update());
-    // this.world.step(delta);
+    this.world.step(this.fixedTimeStep, delta, this.maxSubSteps);
+    this.car.update();
+    this.cannonDebugger.update();
   }
 
   _addConcreteBlock() {

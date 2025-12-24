@@ -49,7 +49,6 @@ export default class Light {
       });
 
       folder.add(params, "intensity", 0, 500).onChange((value) => {
-        console.log(value);
         this.spotLight.intensity = value;
       });
 
@@ -94,7 +93,7 @@ export default class Light {
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);
     dirLight.position.set(5, 10, 5);
     dirLight.castShadow = true;
-    // this.scene.add(dirLight);
+    this.scene.add(dirLight);
 
   }
 
