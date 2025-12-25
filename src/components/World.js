@@ -80,6 +80,11 @@ export default class World {
     this.car = new Car(this.scene);
     this.world.addBody(this.car.body);
     this.car.vehicle.addToWorld(this.world);
+
+    // добавляем колёса (demo style)
+    this.car.wheelBodies.forEach((wheelBody) => {
+      this.world.addBody(wheelBody);
+    });
   }
 
   

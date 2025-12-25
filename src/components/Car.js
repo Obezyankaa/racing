@@ -1,14 +1,15 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+// ⚠️ Реализация колёс как в cannon-es demo (kinematic wheel bodies)
 
-const WHEEL_RADIUS = 0.4;
+const WHEEL_RADIUS = 0.45;
 
 export default class Car {
   constructor(scene) {
     const chassisShape = new CANNON.Box(new CANNON.Vec3(2, 0.5, 1));
-    const chassisBody = new CANNON.Body({ mass: 300 });
+    const chassisBody = new CANNON.Body({ mass: 150 });
     chassisBody.addShape(chassisShape);
-    chassisBody.position.set(0, 1.5, 0);
+    chassisBody.position.set(0, 3, 0);
     chassisBody.angularVelocity.set(0, -0.5, 0);
 
     const geometry = new THREE.BoxGeometry(4, 1, 2);
@@ -18,8 +19,6 @@ export default class Car {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
     scene.add(mesh);
-
-    this.wheelMeshes = [];
 
     this.body = chassisBody;
     this.mesh = mesh;
@@ -42,7 +41,7 @@ export default class Car {
       // Простыми словами:
       // маленькое → жёсткая машина
       // большое → мягкая, «лодка»
-      suspensionRestLength: 0.3,
+      suspensionRestLength: 0.1,
       frictionSlip: 1.4,
       //  • чем больше — тем больше сцепление
       //  • позже это станет «асфальт / лёд / грязь»
@@ -53,7 +52,7 @@ export default class Car {
       // 📌 Для начала:
       // 	• маленькое значение = стабильнее
       // 	• большое = машина «заваливается»
-      rollInfluence: 0.01,
+      rollInfluence: 0.03,
       axleLocal: new CANNON.Vec3(0, 0, 1),
       chassisConnectionPointLocal: new CANNON.Vec3(-1, 0, 1),
       maxSuspensionTravel: 0.3,
@@ -73,18 +72,53 @@ export default class Car {
       vehicle.addWheel(wheelOptions);
     });
 
-    wheelPositions.forEach((pos) => {
-      const wheel = this._createWheelMesh(WHEEL_RADIUS);
-
-      // ВАЖНО: это ЛОКАЛЬНАЯ позиция относительно корпуса
-      wheel.position.copy(pos);
-
-      // Добавляем колесо ВНУТРЬ корпуса
-      this.mesh.add(wheel);
-      this.wheelMeshes.push(wheel);
-    });
     this.vehicle = vehicle;
 
+    // ===== Wheel bodies (как в demo) =====
+    this.wheelBodies = [];
+    this.wheelMeshes = [];
+
+    const wheelMaterial = new CANNON.Material("wheel");
+
+    this.vehicle.wheelInfos.forEach((wheel) => {
+      const cylinderShape = new CANNON.Cylinder(
+        wheel.radius,
+        wheel.radius,
+        wheel.radius / 2,
+        16
+      );
+      const wheelBody = new CANNON.Body({
+        mass: 0,
+        material: wheelMaterial,
+      });
+
+      wheelBody.type = CANNON.Body.KINEMATIC;
+      wheelBody.collisionFilterGroup = 0;
+
+      const q = new CANNON.Quaternion();
+      q.setFromEuler(Math.PI / 2, 0, 0);
+
+      wheelBody.addShape(cylinderShape, new CANNON.Vec3(), q);
+
+      this.wheelBodies.push(wheelBody);
+
+      const geometry = new THREE.CylinderGeometry(
+        wheel.radius,
+        wheel.radius,
+        wheel.radius / 2,
+        16
+      );
+
+      const material = new THREE.MeshStandardMaterial({ color: 0x222222 });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true;
+
+      console.log(mesh);
+      scene.add(mesh);
+      this.wheelMeshes.push(mesh);
+    });
+
+    console.log(this.wheelMeshes);
     // В Car constructor
     this.suspensionLines = [];
 
@@ -106,10 +140,31 @@ export default class Car {
     // синхронизация корпуса
     this.mesh.position.copy(this.body.position);
     this.mesh.quaternion.copy(this.body.quaternion);
+    
 
-    // обновляем колёса (если ты это уже делаешь)
+    // ===== sync wheel bodies from RaycastVehicle (demo style) =====
     for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
       this.vehicle.updateWheelTransform(i);
+      const t = this.vehicle.wheelInfos[i].worldTransform;
+      const wheelBody = this.wheelBodies[i];
+
+      wheelBody.position.copy(t.position);
+      wheelBody.quaternion.copy(t.quaternion);
+      const wheelMesh = this.wheelMeshes[i];
+      wheelMesh.position.copy(wheelBody.position);
+      const wheelQuat = new THREE.Quaternion(
+        wheelBody.quaternion.x,
+        wheelBody.quaternion.y,
+        wheelBody.quaternion.z,
+        wheelBody.quaternion.w
+      );
+
+      // фиксируем ориентацию цилиндра (ось X)
+      const correction = new THREE.Quaternion();
+      correction.setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0));
+
+      wheelQuat.multiply(correction);
+      wheelMesh.quaternion.copy(wheelQuat);
     }
 
     // 🔥 ВИЗУАЛИЗАЦИЯ ЛУЧЕЙ
@@ -139,20 +194,4 @@ export default class Car {
       this.suspensionLines[i].geometry.attributes.position.needsUpdate = true;
     });
   }
-
-  _createWheelMesh(radius = WHEEL_RADIUS) {
-    const geometry = new THREE.CylinderGeometry(
-      radius,
-      radius,
-      WHEEL_RADIUS,
-      16
-    );
-    const material = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const wheel = new THREE.Mesh(geometry, material);
-
-    // цилиндр по умолчанию стоит вертикально — кладём его
-    wheel.rotation.x = Math.PI / 2;
-    wheel.castShadow = true;
-    return wheel;
-  }
-}
+}  
