@@ -8,7 +8,8 @@ import Light from "./Light.js";
 import Floor from "./Floor.js";
 import LampPost from "./LampPost.js";
 import ConcreteBlock from "./ConcreteBlock.js";
-import Car from "./Car.js";
+import Car from "./car/Car.js";
+import CarControls from "./car/CarControls.js";
 
 
 export default class World {
@@ -80,6 +81,7 @@ export default class World {
     this.car = new Car(this.scene);
     this.world.addBody(this.car.body);
     this.car.vehicle.addToWorld(this.world);
+    this.controls = new CarControls(this.car);
 
     // добавляем колёса (demo style)
     this.car.wheelBodies.forEach((wheelBody) => {
@@ -92,6 +94,7 @@ export default class World {
     this.lights?.update();
     this.lampPosts?.forEach((lamp) => lamp.update());
     this.world.step(this.fixedTimeStep, delta, this.maxSubSteps);
+    this.controls.update();
     this.car.update();
     this.cannonDebugger.update();
   }
