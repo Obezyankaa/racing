@@ -113,12 +113,10 @@ export default class Car {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.castShadow = true;
 
-      console.log(mesh);
       scene.add(mesh);
       this.wheelMeshes.push(mesh);
     });
 
-    console.log(this.wheelMeshes);
     // В Car constructor
     this.suspensionLines = [];
 
@@ -134,13 +132,64 @@ export default class Car {
       scene.add(line);
       this.suspensionLines.push(line);
     }
+
+    this.controls = {
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+    };
+
+    window.addEventListener("keydown", (e) => {
+      switch (e.code) {
+        case "KeyW":
+          this.controls.forward = true;
+          break;
+        case "KeyS":
+          this.controls.backward = true;
+          break;
+        case "KeyA":
+          this.controls.left = true;
+          break;
+        case "KeyD":
+          this.controls.right = true;
+          break;
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      switch (e.code) {
+        case "KeyW":
+          this.controls.forward = false;
+          break;
+        case "KeyS":
+          this.controls.backward = false;
+          break;
+        case "KeyA":
+          this.controls.left = false;
+          break;
+        case "KeyD":
+          this.controls.right = false;
+          break;
+      }
+    });
+  }
+
+  setSteering(value) {
+    // value в радианах: ~0.3 = нормальный поворот
+    this.vehicle.setSteeringValue(value, 0); // front-left
+    this.vehicle.setSteeringValue(value, 2); // front-right
+  }
+
+  setEngineForce(force) {
+    this.vehicle.applyEngineForce(force, 1); // rear-left
+    this.vehicle.applyEngineForce(force, 3); // rear-right
   }
 
   update() {
     // синхронизация корпуса
     this.mesh.position.copy(this.body.position);
     this.mesh.quaternion.copy(this.body.quaternion);
-    
 
     // ===== sync wheel bodies from RaycastVehicle (demo style) =====
     for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
@@ -165,6 +214,26 @@ export default class Car {
 
       wheelQuat.multiply(correction);
       wheelMesh.quaternion.copy(wheelQuat);
+    }
+
+    const ENGINE_FORCE = 200;
+
+    if (this.controls.forward) {
+      this.setEngineForce(-ENGINE_FORCE);
+    } else if (this.controls.backward) {
+      this.setEngineForce(ENGINE_FORCE);
+    } else {
+      this.setEngineForce(0);
+    }
+
+    const STEER_VALUE = 0.3;
+
+    if (this.controls.left) {
+      this.setSteering(STEER_VALUE);
+    } else if (this.controls.right) {
+      this.setSteering(-STEER_VALUE);
+    } else {
+      this.setSteering(0);
     }
 
     // 🔥 ВИЗУАЛИЗАЦИЯ ЛУЧЕЙ
@@ -194,4 +263,4 @@ export default class Car {
       this.suspensionLines[i].geometry.attributes.position.needsUpdate = true;
     });
   }
-}  
+}
