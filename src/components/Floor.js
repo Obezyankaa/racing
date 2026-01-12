@@ -61,6 +61,7 @@ export default class Floor {
     /**
      * Материалы
      */
+    /*
     this.material = new THREE.MeshStandardMaterial({
       // map → базовый цвет поверхности (albedo)
       // влияет ТОЛЬКО на цвет, не на свет, не на блики
@@ -97,13 +98,27 @@ export default class Floor {
       //   DoubleSide → пол будет виден
       side: THREE.FrontSide,
     });
+    */
 
     /**
      * Mesh
      */
-    this.plane = new THREE.Mesh(this.geometry, this.material);
+    this.plane = new THREE.Mesh(
+      this.geometry,
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
     this.plane.rotation.x = -Math.PI * 0.5;
     this.plane.receiveShadow = true;
+
+
+    this.grid = new THREE.GridHelper(
+      30, // размер сетки совпадает с PlaneGeometry
+      30, // 1 метр на клетку
+      0x555555,
+      0x777777
+    );
+    this.scene.add(this.grid);
+
 
     this.scene.add(this.plane);
   }

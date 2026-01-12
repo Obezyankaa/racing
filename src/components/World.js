@@ -18,6 +18,7 @@ export default class World {
     this.camera = camera;
     this.debugUI = new DebugGUI();
     this.axesHelper = new THREE.AxesHelper(5);
+    this.cameraMode = "FREE"; // FREE | FOLLOW
 
     // ✅ Добавляем свет
     this.plane = new Floor(this.scene);
@@ -36,9 +37,9 @@ export default class World {
     }
 
     // Ламповые столбы по углам пола
-    this._addLampPosts();
+    // this._addLampPosts();
     // Беттоные блоки добавляем
-    this._addConcreteBlock();
+    // this._addConcreteBlock();
 
     this.world = new CANNON.World({
       gravity: new CANNON.Vec3(0, -9.82, 0), // m/s²
@@ -80,12 +81,19 @@ export default class World {
     // ✅ Добавляем машину
     this.car = new Car(this.scene);
     this.world.addBody(this.car.body);
+    this.followCameraOffset = new THREE.Vector3(6, 3, 0);
     this.car.vehicle.addToWorld(this.world);
     this.controls = new CarControls(this.car);
 
     // добавляем колёса (demo style)
     this.car.wheelBodies.forEach((wheelBody) => {
       this.world.addBody(wheelBody);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "KeyC") {
+        this.cameraMode = this.cameraMode === "FREE" ? "FOLLOW" : "FREE";
+      }
     });
   }
 
@@ -96,6 +104,23 @@ export default class World {
     this.world.step(this.fixedTimeStep, delta, this.maxSubSteps);
     this.controls.update();
     this.car.update();
+
+    // =========================
+    // CAMERA UPDATE
+    // =========================
+    if (this.cameraMode === "FOLLOW") {
+      const carPosition = this.car.mesh.position.clone();
+      const carQuaternion = this.car.mesh.quaternion.clone();
+
+      // смещаем камеру назад относительно машины
+      const offset = this.followCameraOffset.clone();
+      offset.applyQuaternion(carQuaternion);
+
+      const cameraPosition = carPosition.clone().add(offset);
+
+      this.camera.position.lerp(cameraPosition, 0.1);
+      this.camera.lookAt(carPosition);
+    }
     this.cannonDebugger.update();
   }
 
