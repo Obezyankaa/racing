@@ -21,7 +21,7 @@ export default class Car {
     /* =========================
      * PHYSICS: chassis (корпус)
      * ========================= */
-    const chassisShape = new CANNON.Box(new CANNON.Vec3(2, 0.5, 1));
+    const chassisShape = new CANNON.Box(new CANNON.Vec3(3, 0.5, 1));
     const chassisBody = new CANNON.Body({ mass: 50 });
     chassisBody.addShape(chassisShape);
     chassisBody.position.set(0, 3, 0);
@@ -66,13 +66,13 @@ export default class Car {
           this.wheelsGLTF.frontRight = obj;
         }
 
-       if (name === "rear_left_wheel") {
-         this.wheelsGLTF.rearLeft = obj;
-       }
+        if (name === "rear_left_wheel") {
+          this.wheelsGLTF.rearLeft = obj;
+        }
 
-       if (name === "rear_right_wheel") {
-         this.wheelsGLTF.rearRight = obj;
-       }
+        if (name === "rear_right_wheel") {
+          this.wheelsGLTF.rearRight = obj;
+        }
       });
 
       Object.values(this.wheelsGLTF).forEach((wheel) => {
@@ -97,6 +97,15 @@ export default class Car {
       // временно ставим модель в позицию корпуса
       model.position.copy(this.mesh.position);
       model.quaternion.copy(this.mesh.quaternion);
+
+      // 1️⃣ Масштаб — ты уже сделал
+      model.scale.set(3, 3, 3);
+
+      // 2️⃣ ВАЖНО: у GLTF и Cannon могут отличаться «вперёд»/оси.
+      // Мы НЕ крутим model.rotation напрямую, потому что в update() мы копируем quaternion из physics.
+      // Вместо этого храним оффсет и всегда домножаем его в update().
+      this.modelVisualOffset = new THREE.Quaternion();
+      this.modelVisualOffset.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0));
 
       this.scene.add(model);
       this.carModel = model;
@@ -151,10 +160,10 @@ export default class Car {
      * WHEELS: logical positions
      * ========================= */
     const wheelPositions = [
-      new THREE.Vector3(-1, -0.3, 1),
-      new THREE.Vector3(1, -0.3, 1),
-      new THREE.Vector3(-1, -0.3, -1),
-      new THREE.Vector3(1, -0.3, -1),
+      new THREE.Vector3(-1.7, -0.3, 1),
+      new THREE.Vector3(1.6, -0.3, 1),
+      new THREE.Vector3(-1.7, -0.3, -1),
+      new THREE.Vector3(1.6, -0.3, -1),
     ];
 
     wheelPositions.forEach((v) => {
@@ -236,10 +245,14 @@ export default class Car {
     this.mesh.position.copy(this.body.position);
     this.mesh.quaternion.copy(this.body.quaternion);
 
-    // синхронизация GLTF-модели с физическим корпусом
+    // // синхронизация GLTF-модели с физическим корпусом
     if (this.carModel) {
       this.carModel.position.copy(this.body.position);
+      // ⬇️ ВАЖНО: визуальный оффсет вниз
+      this.carModel.position.y -= 0.7;
       this.carModel.quaternion.copy(this.body.quaternion);
+      if (this.modelVisualOffset)
+        this.carModel.quaternion.multiply(this.modelVisualOffset);
     }
 
     for (let i = 0; i < this.vehicle.wheelInfos.length; i++) {
