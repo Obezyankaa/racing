@@ -22,7 +22,7 @@ export default class Car {
      * PHYSICS: chassis (корпус)
      * ========================= */
     const chassisShape = new CANNON.Box(new CANNON.Vec3(3, 0.5, 1));
-    const chassisBody = new CANNON.Body({ mass: 50 });
+    const chassisBody = new CANNON.Body({ mass: 75 });
     chassisBody.addShape(chassisShape);
     chassisBody.position.set(0, 3, 0);
     chassisBody.angularVelocity.set(0, -0.5, 0);
@@ -81,7 +81,7 @@ export default class Car {
         wheel.traverse((obj) => {
           if (obj.isMesh) {
             obj.material = obj.material.clone();
-            obj.material.emissive.setHex(0x00ff00);
+            // obj.material.emissive.setHex(0x00ff00);
             obj.material.emissiveIntensity = 0.5;
           }
         });
@@ -139,12 +139,22 @@ export default class Car {
      * ========================= */
     const vehicle = new CANNON.RaycastVehicle({ chassisBody });
 
+    // === Handling: base grip (важная ручка дрифта) ===
+    // Больше = больше держак, меньше = легче сорвать.
+    const FRONT_FRICTION = 1.6; // перед должен держать (контроль)
+    const REAR_FRICTION = 0.4; // зад должен срываться раньше (дрифт)
+
+    // === Handling: roll influence (распределение крена) ===
+    // Меньше = стабильнее, больше = активнее в заносе
+    const FRONT_ROLL = 0.01;
+    const REAR_ROLL = 0.005;
+
     const wheelOptions = {
       radius: WHEEL_RADIUS,
       directionLocal: new CANNON.Vec3(0, -1, 0),
       suspensionStiffness: 30,
       suspensionRestLength: 0.1,
-      frictionSlip: 1.4,
+      frictionSlip: 2,
       dampingRelaxation: 2.3,
       dampingCompression: 4.4,
       maxSuspensionForce: 100000,
@@ -172,6 +182,16 @@ export default class Car {
     });
 
     this.vehicle = vehicle;
+
+    // === Apply front / rear grip + roll split ===
+    // 0,1 — передние колёса
+    // 2,3 — задние колёса
+    this.vehicle.wheelInfos.forEach((wheel, index) => {
+      const isFront = index === 0 || index === 2;
+
+      wheel.frictionSlip = isFront ? FRONT_FRICTION : REAR_FRICTION;
+      wheel.rollInfluence = isFront ? FRONT_ROLL : REAR_ROLL;
+    });
 
     /* =========================
      * WHEELS: kinematic bodies + meshes (demo style)

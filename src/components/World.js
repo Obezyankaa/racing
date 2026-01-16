@@ -47,6 +47,16 @@ export default class World {
     this.fixedTimeStep = 1 / 60;
     this.maxSubSteps = 3;
 
+    // const grid = new THREE.GridHelper(
+    //   200, // размер поля
+    //   100, // количество ячеек
+    //   0xffffff, // цвет больших линий
+    //   0x231c4f // цвет мелких линий
+    // );
+
+    // this.scene.add(grid);
+
+
     this.cannonDebugger = CannonDebugger(this.scene, this.world, {
       color: 0x00ff00, // цвет линий
     });
@@ -64,7 +74,7 @@ export default class World {
     // this.world.addContactMaterial(asphaltBallContact);
 
     const groundShape = new CANNON.Box(
-      new CANNON.Vec3(15, 0.1, 15) // половины размеров
+      new CANNON.Vec3(30, 0.1, 30) // половины размеров
     );
 
     const groundBody = new CANNON.Body({

@@ -112,8 +112,8 @@ export default class Floor {
 
 
     this.grid = new THREE.GridHelper(
-      30, // размер сетки совпадает с PlaneGeometry
-      30, // 1 метр на клетку
+      60, // размер сетки совпадает с PlaneGeometry
+      60, // 1 метр на клетку
       0x555555,
       0x777777
     );
