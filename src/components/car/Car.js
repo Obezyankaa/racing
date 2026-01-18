@@ -18,6 +18,25 @@ export default class Car {
   constructor(scene) {
     this.scene = scene;
     this.loader = new GLTFLoader();
+
+    // === Driving mode ===
+    this.drivingMode = "NORMAL"; // NORMAL | DRIFT
+
+    this.handlingPresets = {
+      NORMAL: {
+        FRONT_FRICTION: 2.2,
+        REAR_FRICTION: 2.0,
+        FRONT_ROLL: 0.001,
+        REAR_ROLL: 0.01,
+      },
+      DRIFT: {
+        FRONT_FRICTION: 1.6,
+        REAR_FRICTION: 0.65,
+        FRONT_ROLL: 0.002,
+        REAR_ROLL: 0.06,
+      },
+    };
+
     /* =========================
      * PHYSICS: chassis (корпус)
      * ========================= */
@@ -47,7 +66,14 @@ export default class Car {
       rearLeft: null,
       rearRight: null,
     };
-
+    // === Headlights state ===
+    this.headlightsOn = false;
+    // === Brake state ===
+    this.isBraking = false;
+    this.headlightMeshes = [];
+    this.headLights = [];
+    // === Rear lights ===
+    this.rearLightMeshes = [];
     this.loader.load("/static/car/nissan/Nissan_Silvia_S13.gltf", (gltf) => {
       const model = gltf.scene;
 
@@ -56,7 +82,49 @@ export default class Car {
 
         const name = obj.name.toLowerCase();
 
-        console.log(obj);
+        console.log(obj?.material?.emissive);
+
+        if (obj.isMesh && obj.material?.emissive) {
+          const e = obj.material.emissive;
+
+          // белый emissive = передние фары
+          if (e.r === 1 && e.g === 1 && e.b === 1) {
+            this.headlightMeshes.push(obj);
+
+            const mat = obj.material.clone();
+
+            // === fake glass headlights (game-style) ===
+            mat.transparent = true;
+            mat.opacity = 0.35;
+
+            mat.roughness = 0.25;
+            mat.metalness = 0.0;
+
+            mat.emissive.set(0xffffff);
+            mat.emissiveIntensity = 0; // выключены по умолчанию
+
+            obj.material = mat;
+          }
+
+          // красный emissive = задние фары
+          if (e.r === 1 && e.g === 0 && e.b === 0) {
+            this.rearLightMeshes.push(obj);
+
+            const mat = obj.material.clone();
+
+            // === fake glass rear lights (game-style) ===
+            mat.transparent = true;
+            mat.opacity = 0.4;
+
+            mat.roughness = 0.35;
+            mat.metalness = 0.0;
+
+            mat.emissive.set(0xff0000);
+            mat.emissiveIntensity = 0; // пока выключены
+
+            obj.material = mat;
+          }
+        }
 
         if (name.includes("front") && name.includes("left")) {
           this.wheelsGLTF.frontLeft = obj;
@@ -110,6 +178,35 @@ export default class Car {
       this.scene.add(model);
       this.carModel = model;
 
+      // === Create head lights ===
+      this.headlightMeshes.forEach((mesh) => {
+        const light = new THREE.SpotLight(
+          0xffffff,
+          3, // intensity
+          30, // distance
+          Math.PI / 6, // angle
+          0.3, // penumbra
+          1, // decay
+        );
+
+        light.visible = false;
+        light.castShadow = true;
+
+        // ставим свет в позицию фары
+        mesh.getWorldPosition(light.position);
+
+        // светит вперёд
+        const target = new THREE.Object3D();
+        target.position.copy(light.position);
+        target.position.add(new THREE.Vector3(0, 0, 10));
+
+        this.scene.add(target);
+        light.target = target;
+
+        this.scene.add(light);
+        this.headLights.push(light);
+      });
+
       // === Вариант A: выносим колёса из иерархии carModel прямо в сцену ===
       // Теперь им можно безопасно задавать world position/quaternion из physics.
       const detachToScene = (obj) => {
@@ -126,12 +223,12 @@ export default class Car {
 
     this.wheelVisualCorrection = new THREE.Quaternion();
     this.wheelVisualCorrection.setFromEuler(
-      new THREE.Euler(0, 0, -Math.PI / 2)
+      new THREE.Euler(0, 0, -Math.PI / 2),
     );
 
     this.wheelTestRotation = new THREE.Quaternion();
     this.wheelTestRotation.setFromEuler(
-      new THREE.Euler(0, Math.PI / 2, 0) // 90° вокруг Y
+      new THREE.Euler(0, Math.PI / 2, 0), // 90° вокруг Y
     );
 
     /* =========================
@@ -141,13 +238,13 @@ export default class Car {
 
     // === Handling: base grip (важная ручка дрифта) ===
     // Больше = больше держак, меньше = легче сорвать.
-    const FRONT_FRICTION = 1.6; // перед должен держать (контроль)
-    const REAR_FRICTION = 0.4; // зад должен срываться раньше (дрифт)
+    // const FRONT_FRICTION = 1.6; // перед должен держать (контроль)
+    // const REAR_FRICTION = 0.7; // зад должен срываться раньше (дрифт)
 
     // === Handling: roll influence (распределение крена) ===
     // Меньше = стабильнее, больше = активнее в заносе
-    const FRONT_ROLL = 0.01;
-    const REAR_ROLL = 0.005;
+    // const FRONT_ROLL = 0.002; // перед почти не кренится → держит
+    // const REAR_ROLL = 0.06; // зад активный → легче держать угол
 
     const wheelOptions = {
       radius: WHEEL_RADIUS,
@@ -163,7 +260,7 @@ export default class Car {
       chassisConnectionPointLocal: new CANNON.Vec3(),
       maxSuspensionTravel: 0.3,
       customSlidingRotationalSpeed: -30,
-      useCustomSlidingRotationalSpeed: true,
+      useCustomSlidingRotationalSpeed: false,
     };
 
     /* =========================
@@ -186,12 +283,7 @@ export default class Car {
     // === Apply front / rear grip + roll split ===
     // 0,1 — передние колёса
     // 2,3 — задние колёса
-    this.vehicle.wheelInfos.forEach((wheel, index) => {
-      const isFront = index === 0 || index === 2;
-
-      wheel.frictionSlip = isFront ? FRONT_FRICTION : REAR_FRICTION;
-      wheel.rollInfluence = isFront ? FRONT_ROLL : REAR_ROLL;
-    });
+    this.applyHandlingPreset();
 
     /* =========================
      * WHEELS: kinematic bodies + meshes (demo style)
@@ -207,7 +299,7 @@ export default class Car {
         wheel.radius,
         wheel.radius,
         wheel.radius / 2,
-        16
+        16,
       );
 
       const body = new CANNON.Body({ mass: 0, material: wheelMaterial });
@@ -225,7 +317,7 @@ export default class Car {
         wheel.radius,
         wheel.radius,
         wheel.radius / 2,
-        16
+        16,
       );
       const material = new THREE.MeshStandardMaterial({ visible: false });
       const mesh = new THREE.Mesh(geometry, material);
@@ -257,6 +349,69 @@ export default class Car {
   }
 
   /**
+   * Brake control.
+   * Активное торможение (НЕ отпуск газа).
+   */
+  setBrake(force) {
+    const isBrakingNow = force > 0;
+
+    // обновляем состояние тормоза
+    this.isBraking = isBrakingNow;
+
+    // распределяем тормоз по колёсам
+    // передние — сильнее, задние — слабее (стабильность)
+    this.vehicle.setBrake(force, 0); // front-left
+    this.vehicle.setBrake(force, 2); // front-right
+
+    this.vehicle.setBrake(force * 0.5, 1); // rear-left
+    this.vehicle.setBrake(force * 0.5, 3); // rear-right
+  }
+
+  toggleHeadlights() {
+    this.headlightsOn = !this.headlightsOn;
+
+    // передние фары
+    this.headlightMeshes.forEach((mesh) => {
+      mesh.material.emissiveIntensity = this.headlightsOn ? 2 : 0;
+    });
+
+    // задние габариты
+    this.rearLightMeshes.forEach((mesh) => {
+      mesh.material.emissiveIntensity = this.headlightsOn ? 0.6 : 0;
+    });
+
+    // реальный свет
+    this.headLights.forEach((light) => {
+      light.visible = this.headlightsOn;
+    });
+  }
+
+  applyHandlingPreset() {
+    const preset = this.handlingPresets[this.drivingMode];
+
+    this.vehicle.wheelInfos.forEach((wheel, index) => {
+      const isFront = index === 0 || index === 2;
+
+      wheel.frictionSlip = isFront
+        ? preset.FRONT_FRICTION
+        : preset.REAR_FRICTION;
+
+      wheel.rollInfluence = isFront
+        ? preset.FRONT_ROLL
+        : preset.REAR_ROLL;
+    });
+  }
+
+  setDrivingMode(mode) {
+    if (!this.handlingPresets[mode]) return;
+
+    this.drivingMode = mode;
+    this.applyHandlingPreset();
+
+    console.log(`[Car] Mode: ${mode}`);
+  }
+
+  /**
    * Update loop.
    * Синхронизация physics → render и применение управления.
    */
@@ -280,13 +435,13 @@ export default class Car {
 
       const t = this.vehicle.wheelInfos[i].worldTransform;
 
-    const gltfWheelsByIndex = [
-      this.wheelsGLTF.frontLeft, // 0
-      this.wheelsGLTF.rearLeft, // 1
-      this.wheelsGLTF.frontRight, // 2
-      this.wheelsGLTF.rearRight, // 3
-    ];
-      
+      const gltfWheelsByIndex = [
+        this.wheelsGLTF.frontLeft, // 0
+        this.wheelsGLTF.rearLeft, // 1
+        this.wheelsGLTF.frontRight, // 2
+        this.wheelsGLTF.rearRight, // 3
+      ];
+
       // // 2) синхронизируем GLTF (если колесо есть)
       // if (gltfWheel) {
       //   gltfWheel.position.copy(t.position);
@@ -332,5 +487,27 @@ export default class Car {
       wheelQuat.multiply(correction);
       wheelMesh.quaternion.copy(wheelQuat);
     }
+
+    if (this.isBraking) {
+      console.log("BRAKE ON");
+    }
+
+    // === Rear brake lights logic ===
+    this.rearLightMeshes.forEach((mesh) => {
+
+      if (this.isBraking) {
+        console.log("BRAKE ON");
+      }
+      if (!this.headlightsOn) {
+        // фары выключены — всё погашено
+        mesh.material.emissiveIntensity = 0;
+      } else if (this.isBraking) {
+        // стоп-сигнал
+        mesh.material.emissiveIntensity = 5.0;
+      } else {
+        // габариты
+        mesh.material.emissiveIntensity = 0.6;
+      }
+    });
   }
 }

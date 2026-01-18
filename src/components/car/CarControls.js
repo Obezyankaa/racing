@@ -17,9 +17,10 @@ export default class CarControls {
      * ========================= */
     this.state = {
       forward: false,
-      backward: false,
+      backward: false, // будем использовать как REVERSE
       left: false,
       right: false,
+      brake: false, // ⬅️ добавим
     };
 
     this._bindEvents();
@@ -35,7 +36,10 @@ export default class CarControls {
           this.state.forward = true;
           break;
         case "KeyS":
-          this.state.backward = true;
+          this.state.backward = true; // задний ход
+          break;
+        case "Space":
+          this.state.brake = true; // тормоз
           break;
         case "KeyA":
           this.state.left = true;
@@ -54,6 +58,9 @@ export default class CarControls {
         case "KeyS":
           this.state.backward = false;
           break;
+        case "Space":
+          this.state.brake = false;
+          break;
         case "KeyA":
           this.state.left = false;
           break;
@@ -69,23 +76,48 @@ export default class CarControls {
    * Вызывается каждый кадр из World / App
    */
   update() {
-    const ENGINE_FORCE = 200;
-    const STEER_VALUE = 0.3;
+    const ENGINE_FORCE =
+      this.car.drivingMode === "DRIFT" ? 520 : 260;
+    const REVERSE_FORCE = 150;
+    const BRAKE_FORCE = 5;
+    const STEER_VALUE = 0.4;
 
     /* =========================
-     * ENGINE
+     * ENGINE / BRAKE / REVERSE
      * ========================= */
-    if (this.state.forward) {
-      this.car.setEngineForce(-ENGINE_FORCE);
-    } else if (this.state.backward) {
-      this.car.setEngineForce(ENGINE_FORCE);
-    } else {
+
+    if (this.state.brake) {
+      // тормоз — приоритет выше всего
       this.car.setEngineForce(0);
+      this.car.setBrake(BRAKE_FORCE);
+    } else if (this.state.forward) {
+      this.car.setBrake(0);
+
+      let engineForce = -ENGINE_FORCE;
+
+      // 🔥 Drift assist: если есть руль — слегка усиливаем тягу
+      if (
+        this.car.drivingMode === "DRIFT" &&
+        (this.state.left || this.state.right)
+      ) {
+        engineForce *= 1.2; // +20% тяги ТОЛЬКО в заносе
+      }
+
+      this.car.setEngineForce(engineForce);
+    } else if (this.state.backward) {
+      // задний ход
+      this.car.setBrake(0);
+      this.car.setEngineForce(REVERSE_FORCE);
+    } else {
+      // ничего не жмём
+      this.car.setEngineForce(0);
+      this.car.setBrake(0);
     }
 
     /* =========================
      * STEERING
      * ========================= */
+
     if (this.state.left) {
       this.car.setSteering(STEER_VALUE);
     } else if (this.state.right) {

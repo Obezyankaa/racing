@@ -17,6 +17,11 @@ export default class World {
     this.scene = scene;
     this.camera = camera;
     this.debugUI = new DebugGUI();
+    // === Driving mode GUI ===
+    this.drivingModeParams = {
+      NORMAL: () => this.car.setDrivingMode("NORMAL"),
+      DRIFT: () => this.car.setDrivingMode("DRIFT"),
+    };
     this.axesHelper = new THREE.AxesHelper(5);
     this.cameraMode = "FREE"; // FREE | FOLLOW
 
@@ -90,6 +95,10 @@ export default class World {
 
     // ✅ Добавляем машину
     this.car = new Car(this.scene);
+    const drivingFolder = this.debugUI.gui.addFolder("Driving Mode");
+    drivingFolder.add(this.drivingModeParams, "NORMAL");
+    drivingFolder.add(this.drivingModeParams, "DRIFT");
+    drivingFolder.open();
     this.world.addBody(this.car.body);
     this.followCameraOffset = new THREE.Vector3(6, 3, 0);
     this.car.vehicle.addToWorld(this.world);
@@ -101,11 +110,37 @@ export default class World {
     });
 
     window.addEventListener("keydown", (e) => {
+      if (e.code === "KeyL") {
+        this.car.toggleHeadlights();
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
       if (e.code === "KeyC") {
         this.cameraMode = this.cameraMode === "FREE" ? "FOLLOW" : "FREE";
       }
     });
+
+    const speedometer = document.createElement("div");
+    speedometer.style.position = "fixed";
+    speedometer.style.right = "20px";
+    speedometer.style.bottom = "20px";
+    speedometer.style.padding = "8px 12px";
+    speedometer.style.background = "rgba(0, 0, 0, 0.6)";
+    speedometer.style.color = "#00ffcc";
+    speedometer.style.fontFamily = "monospace";
+    speedometer.style.fontSize = "20px";
+    speedometer.style.borderRadius = "6px";
+    speedometer.style.zIndex = "1000";
+
+    speedometer.innerText = "Speed: 0 km/h";
+
+    document.body.appendChild(speedometer);
+
+    // сохраним ссылку
+    this.speedometer = speedometer;
   }
+  
 
   
   update(delta) {
@@ -114,6 +149,14 @@ export default class World {
     this.world.step(this.fixedTimeStep, delta, this.maxSubSteps);
     this.controls.update();
     this.car.update();
+
+    if (this.car && this.car.body) {
+      const velocity = this.car.body.velocity;
+      const speedMS = velocity.length();
+      const speedKMH = speedMS * 3.6;
+
+      this.speedometer.innerText = `Speed: ${speedKMH.toFixed(1)} km/h`;
+    }
 
     // =========================
     // CAMERA UPDATE
