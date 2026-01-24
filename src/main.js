@@ -1,3 +1,5 @@
-import App from "./App.js";
-const canvas = document.querySelector("canvas.webgl");
-new App(canvas);
+// src/main.js
+import "./style.css";
+import { Game } from "../src/code/Game.js";
+
+new Game();
