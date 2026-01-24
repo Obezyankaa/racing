@@ -5,8 +5,13 @@ export class LightingSystem {
   constructor(scene) {
     this.scene = scene;
     this.lights = {};
-    this.timeOfDay = 0.5; // 0 = ночь, 0.5 = день, 1 = ночь
+    this.timeOfDay = 0.5; // 0 = полночь, 0.5 = полдень, 1 = полночь
     this.dayNightCycle = false;
+    this.useRealTime = false;
+
+    // Оптимизация: обновляем освещение не каждый кадр
+    this.updateInterval = 1.0; // обновлять раз в секунду
+    this.timeSinceLastUpdate = 0;
 
     this.init();
   }
@@ -34,23 +39,60 @@ export class LightingSystem {
     this.scene.add(this.lights.directional);
   }
 
+  // Установить время на основе реального времени пользователя
+  syncWithRealTime() {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+
+    // Преобразуем текущее время в значение 0-1
+    // 0:00 = 0, 12:00 = 0.5, 24:00 = 1
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    this.timeOfDay = totalSeconds / 86400; // 86400 секунд в сутках
+
+    this.useRealTime = true;
+    this.updateLighting();
+
+    console.log(`🕐 Синхронизировано с реальным временем: ${hours}:${minutes}`);
+  }
+
   // Включить/выключить цикл день/ночь
-  enableDayNightCycle(enabled) {
+  enableDayNightCycle(enabled, useRealTime = false) {
     this.dayNightCycle = enabled;
+
+    if (enabled && useRealTime) {
+      this.syncWithRealTime();
+    }
   }
 
   update(deltaTime) {
     if (!this.dayNightCycle) return;
 
-    // Медленный цикл день/ночь (полный цикл за ~60 секунд)
-    this.timeOfDay += deltaTime * 0.016;
+    // ОПТИМИЗАЦИЯ: обновляем освещение не каждый кадр, а раз в секунду
+    this.timeSinceLastUpdate += deltaTime;
+
+    if (this.timeSinceLastUpdate < this.updateInterval) {
+      return; // пропускаем обновление
+    }
+
+    this.timeSinceLastUpdate = 0;
+
+    if (this.useRealTime) {
+      // Реальное время: 1 секунда в игре = 1 секунда в жизни
+      this.timeOfDay += this.updateInterval / 86400;
+    } else {
+      // Ускоренное время: полный цикл за 60 секунд (для демо/тестов)
+      this.timeOfDay += this.updateInterval * 0.016;
+    }
+
     if (this.timeOfDay > 1) this.timeOfDay = 0;
 
     this.updateLighting();
   }
 
   updateLighting() {
-    // Рассчитываем угол солнца (0 = восход, 0.5 = зенит, 1 = закат)
+    // Рассчитываем угол солнца
     const angle = this.timeOfDay * Math.PI * 2;
     const sunHeight = Math.sin(angle);
 
@@ -79,9 +121,18 @@ export class LightingSystem {
     }
   }
 
+  // Вручную установить время суток (0-1)
   setTimeOfDay(time) {
     this.timeOfDay = Math.max(0, Math.min(1, time));
     this.updateLighting();
+  }
+
+  // Получить текущее время в формате HH:MM
+  getCurrentTime() {
+    const totalSeconds = this.timeOfDay * 86400;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
   }
 
   dispose() {

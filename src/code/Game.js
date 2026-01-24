@@ -4,12 +4,14 @@ import * as CANNON from "cannon-es";
 import { PhysicsWorld } from "./PhysicsWorld.js";
 import { CameraController } from "../systems/CameraController.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
+import { Debug } from "../utils/Debug.js";
 
 export class Game {
   constructor() {
     this.clock = new THREE.Clock();
     this.init();
     this.createTestScene();
+    this.setupDebug();
     this.animate();
   }
 
@@ -30,6 +32,9 @@ export class Game {
     // Lighting System
     this.lightingSystem = new LightingSystem(this.scene);
 
+    // Включаем цикл день/ночь с реальным временем
+    this.lightingSystem.enableDayNightCycle(true, true);
+
     // Physics
     this.physics = new PhysicsWorld();
 
@@ -37,6 +42,20 @@ export class Game {
     window.addEventListener("resize", () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
+  }
+
+  setupDebug() {
+    // Debug только в dev режиме
+    if (import.meta.env.DEV) {
+      this.debug = new Debug(this);
+
+      // Горячая клавиша H для показа/скрытия
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "h" || e.key === "H") {
+          this.debug?.toggle();
+        }
+      });
+    }
   }
 
   createTestScene() {
