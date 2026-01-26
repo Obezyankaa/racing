@@ -2,7 +2,7 @@
 import { GUI } from "lil-gui";
 import { LightingDebug } from "./debug/LightingDebug.js";
 import { PhysicsDebug } from "./debug/PhysicsDebug.js";
-import { CameraDebug } from "./debug/CameraDebug.js";
+import { InputDebug } from "./debug/InputDebug.js";
 
 export class Debug {
   constructor(game) {
@@ -15,8 +15,8 @@ export class Debug {
   init() {
     // Инициализируем отдельные debug модули
     new LightingDebug(this.gui, this.game);
-      new PhysicsDebug(this.gui, this.game);
-       new CameraDebug(this.gui, this.game);
+    new PhysicsDebug(this.gui, this.game);
+    new InputDebug(this.gui, this.game);
 
     // Можно добавить общую информацию
     this.addGeneralInfo();

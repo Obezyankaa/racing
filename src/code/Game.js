@@ -4,6 +4,7 @@ import * as CANNON from "cannon-es";
 import { PhysicsWorld } from "./PhysicsWorld.js";
 import { CameraController } from "../systems/CameraController.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
+import { InputController } from "../systems/InputController.js";
 import { Debug } from "../utils/Debug.js";
 
 export class Game {
@@ -29,11 +30,21 @@ export class Game {
     // Camera Controller
     this.cameraController = new CameraController(this.renderer);
 
+    // Input Controller
+    this.inputController = new InputController([
+      { name: "forward", keys: ["ArrowUp", "KeyW"] },
+      { name: "backward", keys: ["ArrowDown", "KeyS"] },
+      { name: "left", keys: ["ArrowLeft", "KeyA"] },
+      { name: "right", keys: ["ArrowRight", "KeyD"] },
+      { name: "brake", keys: ["Space"] },
+      { name: "reset", keys: ["KeyR"] },
+    ]);
+
     // Lighting System
     this.lightingSystem = new LightingSystem(this.scene);
 
     // Включаем цикл день/ночь с реальным временем
-    this.lightingSystem.enableDayNightCycle(true, true);
+    this.lightingSystem.updateSunPosition(true, true);
 
     // Physics
     this.physics = new PhysicsWorld();
@@ -103,9 +114,15 @@ export class Game {
     const deltaTime = this.clock.getDelta();
 
     // Обновляем системы
+    this.inputController.update(); // важно вызывать первым
     this.cameraController.update();
-    this.lightingSystem.update(deltaTime);
+    // this.lightingSystem.update(deltaTime);
     this.physics.update(deltaTime);
+
+    // Тестируем Input (можно удалить потом)
+    if (this.inputController.isJustPressed("reset")) {
+      console.log("Reset нажат!");
+    }
 
     // Рендерим
     this.renderer.render(this.scene, this.cameraController.getCamera());

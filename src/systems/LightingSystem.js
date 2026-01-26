@@ -5,134 +5,75 @@ export class LightingSystem {
   constructor(scene) {
     this.scene = scene;
     this.lights = {};
-    this.timeOfDay = 0.5; // 0 = полночь, 0.5 = полдень, 1 = полночь
-    this.dayNightCycle = false;
-    this.useRealTime = false;
-
-    // Оптимизация: обновляем освещение не каждый кадр
-    this.updateInterval = 1.0; // обновлять раз в секунду
-    this.timeSinceLastUpdate = 0;
+    this.timeOfDay = 0; // 0 = полночь, 0.5 = полдень, 1 = полночь (полный цикл)
 
     this.init();
   }
 
   init() {
-    // Ambient light
-    this.lights.ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    // Ambient light - рассеянный свет
+    this.lights.ambient = new THREE.AmbientLight(0xffffff, 0.3);
     this.scene.add(this.lights.ambient);
 
     // Directional light (солнце)
-    this.lights.directional = new THREE.DirectionalLight(0xffffff, 0.8);
-    this.lights.directional.position.set(10, 10, 5);
-    this.lights.directional.castShadow = true;
+    this.lights.sun = new THREE.DirectionalLight(0xffffff, 0.8);
+    this.lights.sun.position.set(10, 10, 5);
+    this.lights.sun.castShadow = true;
 
     // Настройки теней
-    this.lights.directional.shadow.mapSize.width = 2048;
-    this.lights.directional.shadow.mapSize.height = 2048;
-    this.lights.directional.shadow.camera.near = 0.5;
-    this.lights.directional.shadow.camera.far = 50;
-    this.lights.directional.shadow.camera.left = -20;
-    this.lights.directional.shadow.camera.right = 20;
-    this.lights.directional.shadow.camera.top = 20;
-    this.lights.directional.shadow.camera.bottom = -20;
+    this.lights.sun.shadow.mapSize.width = 2048;
+    this.lights.sun.shadow.mapSize.height = 2048;
+    this.lights.sun.shadow.camera.near = 0.5;
+    this.lights.sun.shadow.camera.far = 50;
+    this.lights.sun.shadow.camera.left = -20;
+    this.lights.sun.shadow.camera.right = 20;
+    this.lights.sun.shadow.camera.top = 20;
+    this.lights.sun.shadow.camera.bottom = -20;
 
-    this.scene.add(this.lights.directional);
+    this.scene.add(this.lights.sun);
   }
 
-  // Установить время на основе реального времени пользователя
-  syncWithRealTime() {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
-
-    // Преобразуем текущее время в значение 0-1
-    // 0:00 = 0, 12:00 = 0.5, 24:00 = 1
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    this.timeOfDay = totalSeconds / 86400; // 86400 секунд в сутках
-
-    this.useRealTime = true;
-    this.updateLighting();
-
-    console.log(`🕐 Синхронизировано с реальным временем: ${hours}:${minutes}`);
+  // Устанавливаем время вручную (0 = полночь, 0.5 = полдень, 1 = полночь)
+  setTimeOfDay(time) {
+    this.timeOfDay = Math.max(0, Math.min(1, time)); // ограничиваем 0-1
+    this.updateSunPosition();
   }
 
-  // Включить/выключить цикл день/ночь
-  enableDayNightCycle(enabled, useRealTime = false) {
-    this.dayNightCycle = enabled;
+  // Обновляем позицию солнца на основе timeOfDay
+  updateSunPosition() {
+    // Преобразуем timeOfDay (0-1) в угол (0-360 градусов)
+    // Добавляем -Math.PI/2 чтобы 0 = полночь (солнце внизу)
+    const angle = this.timeOfDay * Math.PI * 2 - Math.PI / 2;
 
-    if (enabled && useRealTime) {
-      this.syncWithRealTime();
-    }
-  }
-
-  update(deltaTime) {
-    if (!this.dayNightCycle) return;
-
-    // ОПТИМИЗАЦИЯ: обновляем освещение не каждый кадр, а раз в секунду
-    this.timeSinceLastUpdate += deltaTime;
-
-    if (this.timeSinceLastUpdate < this.updateInterval) {
-      return; // пропускаем обновление
-    }
-
-    this.timeSinceLastUpdate = 0;
-
-    if (this.useRealTime) {
-      // Реальное время: 1 секунда в игре = 1 секунда в жизни
-      this.timeOfDay += this.updateInterval / 86400;
-    } else {
-      // Ускоренное время: полный цикл за 60 секунд (для демо/тестов)
-      this.timeOfDay += this.updateInterval * 0.016;
-    }
-
-    if (this.timeOfDay > 1) this.timeOfDay = 0;
-
-    this.updateLighting();
-  }
-
-  updateLighting() {
-    // Рассчитываем угол солнца
-    const angle = this.timeOfDay * Math.PI * 2;
+    // Высота солнца: от -1 (под землёй) до +1 (зенит)
     const sunHeight = Math.sin(angle);
 
-    // Позиция солнца
-    this.lights.directional.position.set(
-      Math.cos(angle) * 10,
-      sunHeight * 10,
-      Math.sin(angle) * 10,
+    // Устанавливаем позицию солнца
+    const distance = 30; // расстояние от центра
+    this.lights.sun.position.set(
+      Math.cos(angle) * distance, // X: движение по кругу
+      sunHeight * distance, // Y: высота
+      Math.sin(angle) * distance, // Z: движение по кругу
     );
 
-    // Интенсивность в зависимости от времени суток
+    // Обновляем интенсивность света
+    this.updateLightIntensity(sunHeight);
+
+    console.log(
+      `Время: ${this.timeOfDay.toFixed(2)}, Высота: ${sunHeight.toFixed(2)}`,
+    );
+  }
+
+  // Меняем яркость в зависимости от высоты солнца
+  updateLightIntensity(sunHeight) {
+    // Если солнце под землёй (ночь) - делаем 0, иначе берём высоту
     const dayIntensity = Math.max(0, sunHeight);
-    this.lights.directional.intensity = dayIntensity * 0.8;
-    this.lights.ambient.intensity = 0.3 + dayIntensity * 0.2;
 
-    // Цвет в зависимости от времени суток
-    if (sunHeight < 0.1 && sunHeight > -0.1) {
-      // Закат/рассвет - оранжевый
-      this.lights.directional.color.setHex(0xff7f50);
-    } else if (sunHeight > 0) {
-      // День - белый
-      this.lights.directional.color.setHex(0xffffff);
-    } else {
-      // Ночь - синеватый
-      this.lights.directional.color.setHex(0x4169e1);
-    }
-  }
+    // Солнце: от 0 (ночь) до 1.0 (полдень)
+    this.lights.sun.intensity = dayIntensity * 1.0;
 
-  // Вручную установить время суток (0-1)
-  setTimeOfDay(time) {
-    this.timeOfDay = Math.max(0, Math.min(1, time));
-    this.updateLighting();
-  }
-
-  // Получить текущее время в формате HH:MM
-  getCurrentTime() {
-    const totalSeconds = this.timeOfDay * 86400;
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+    // Ambient: ночью 0.4 (чтобы видеть), днём 0.6
+    this.lights.ambient.intensity = 0.4 + dayIntensity * 0.2;
   }
 
   dispose() {
