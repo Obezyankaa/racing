@@ -1,36 +1,53 @@
 // src/core/PhysicsWorld.js
-import * as CANNON from "cannon-es";
+import RAPIER from "@dimforge/rapier3d-compat";
 
 export class PhysicsWorld {
   constructor() {
-    this.world = new CANNON.World();
-    this.world.gravity.set(0, -9.82, 0);
-
-    // Для оптимизации
-    this.world.broadphase = new CANNON.NaiveBroadphase();
-    this.world.solver.iterations = 10;
-
-    // Храним пары физика-визуал
-    this.bodies = [];
+    this.world = null;
+    this.bodies = []; // пары { rigidBody, mesh }
+    this.initialized = false;
   }
 
-  addBody(body, mesh) {
-    this.world.addBody(body);
-    this.bodies.push({ body, mesh });
+  async init() {
+    // Rapier нужно инициализировать асинхронно
+    await RAPIER.init();
+
+    // Создаём мир физики
+    const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+    this.world = new RAPIER.World(gravity);
+
+    this.initialized = true;
+    console.log("✅ Rapier physics initialized");
+
+    return RAPIER; // возвращаем RAPIER для использования в Game.js
+  }
+
+  addBody(rigidBody, mesh) {
+    this.bodies.push({ rigidBody, mesh });
   }
 
   update(deltaTime) {
-    this.world.step(1 / 60, deltaTime, 3);
+    if (!this.initialized) return;
+
+    // Обновляем мир физики
+    this.world.step();
 
     // Синхронизируем визуал с физикой
-    this.bodies.forEach(({ body, mesh }) => {
-      mesh.position.copy(body.position);
-      mesh.quaternion.copy(body.quaternion);
+    this.bodies.forEach(({ rigidBody, mesh }) => {
+      const position = rigidBody.translation();
+      const rotation = rigidBody.rotation();
+
+      mesh.position.set(position.x, position.y, position.z);
+      mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
     });
   }
 
-  removeBody(body) {
-    this.world.removeBody(body);
-    this.bodies = this.bodies.filter((b) => b.body !== body);
+  removeBody(rigidBody) {
+    this.world.removeRigidBody(rigidBody);
+    this.bodies = this.bodies.filter((b) => b.rigidBody !== rigidBody);
+  }
+
+  getWorld() {
+    return this.world;
   }
 }

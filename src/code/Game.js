@@ -1,6 +1,6 @@
 // src/core/Game.js
 import * as THREE from "three";
-import * as CANNON from "cannon-es";
+import RAPIER from "@dimforge/rapier3d-compat";
 import { PhysicsWorld } from "./PhysicsWorld.js";
 import { CameraController } from "../systems/CameraController.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
@@ -10,13 +10,11 @@ import { Debug } from "../utils/Debug.js";
 export class Game {
   constructor() {
     this.clock = new THREE.Clock();
+    this.RAPIER = null; // сохраним ссылку на RAPIER
     this.init();
-    this.createTestScene();
-    this.setupDebug();
-    this.animate();
   }
 
-  init() {
+  async init() {
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -44,15 +42,21 @@ export class Game {
     this.lightingSystem = new LightingSystem(this.scene);
 
     // Включаем цикл день/ночь с реальным временем
-    this.lightingSystem.updateSunPosition(true, true);
+    this.lightingSystem.updateSunPosition();
 
-    // Physics
+    // Physics - инициализируем асинхронно
     this.physics = new PhysicsWorld();
+    this.RAPIER = await this.physics.init(); // получаем RAPIER обратно
 
     // Resize handler
     window.addEventListener("resize", () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    // После инициализации физики создаём сцену
+    this.createTestScene();
+    this.setupDebug();
+    this.animate();
   }
 
   setupDebug() {
@@ -70,6 +74,9 @@ export class Game {
   }
 
   createTestScene() {
+    // Используем сохранённую ссылку на RAPIER
+    const RAPIER = this.RAPIER;
+
     // Пол (плоскость)
     const groundGeometry = new THREE.PlaneGeometry(20, 20);
     const groundMaterial = new THREE.MeshStandardMaterial({
@@ -81,14 +88,13 @@ export class Game {
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
 
-    // Физическое тело для пола
-    const groundShape = new CANNON.Plane();
-    const groundBody = new CANNON.Body({
-      mass: 0,
-      shape: groundShape,
-    });
-    groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
-    this.physics.world.addBody(groundBody);
+    // Физическое тело для пола (статичное)
+    const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0);
+    const groundBody = this.physics.world.createRigidBody(groundBodyDesc);
+
+    // Используем halfExtents для создания плоского box (20x0.1x20)
+    const groundColliderDesc = RAPIER.ColliderDesc.cuboid(10, 0.1, 10);
+    this.physics.world.createCollider(groundColliderDesc, groundBody);
 
     // Падающий куб
     const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -98,13 +104,13 @@ export class Game {
     cubeMesh.castShadow = true;
     this.scene.add(cubeMesh);
 
-    // Физическое тело для куба
-    const cubeShape = new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5));
-    const cubeBody = new CANNON.Body({
-      mass: 1,
-      shape: cubeShape,
-      position: new CANNON.Vec3(0, 5, 0),
-    });
+    // Физическое тело для куба (динамическое)
+    const cubeBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0);
+    const cubeBody = this.physics.world.createRigidBody(cubeBodyDesc);
+
+    const cubeColliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
+    this.physics.world.createCollider(cubeColliderDesc, cubeBody);
+
     this.physics.addBody(cubeBody, cubeMesh);
   }
 
