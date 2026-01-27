@@ -116,7 +116,7 @@ export class Game {
     // Обновляем системы
     this.inputController.update(); // важно вызывать первым
     this.cameraController.update();
-    // this.lightingSystem.update(deltaTime);
+    this.lightingSystem.update(deltaTime);
     this.physics.update(deltaTime);
 
     // Тестируем Input (можно удалить потом)

@@ -6,9 +6,12 @@ export class LightingSystem {
     this.scene = scene;
     this.lights = {};
     this.timeOfDay = 0; // 0 = полночь, 0.5 = полдень, 1 = полночь (полный цикл)
+    this.autoUpdate = false; // включен ли автоматический цикл
+    this.cycleSpeed = 0.01; // скорость цикла (0.01 = ~100 секунд на полный день)
 
     this.init();
   }
+
 
   init() {
     // Ambient light - рассеянный свет
@@ -56,8 +59,9 @@ export class LightingSystem {
       Math.sin(angle) * distance, // Z: движение по кругу
     );
 
-    // Обновляем интенсивность света
+    // Обновляем интенсивность и цвет света
     this.updateLightIntensity(sunHeight);
+    this.updateLightColor(sunHeight);
 
     console.log(
       `Время: ${this.timeOfDay.toFixed(2)}, Высота: ${sunHeight.toFixed(2)}`,
@@ -74,6 +78,39 @@ export class LightingSystem {
 
     // Ambient: ночью 0.4 (чтобы видеть), днём 0.6
     this.lights.ambient.intensity = 0.4 + dayIntensity * 0.2;
+  }
+
+  // Меняем цвет света в зависимости от высоты солнца
+  updateLightColor(sunHeight) {
+    // Закат/рассвет: когда солнце около горизонта (-0.1 до 0.1)
+    if (sunHeight > -0.1 && sunHeight < 0.1) {
+      this.lights.sun.color.setHex(0xffa500); // оранжевый
+    }
+    // День: солнце высоко
+    else if (sunHeight > 0) {
+      this.lights.sun.color.setHex(0xffffff); // белый
+    }
+    // Ночь: солнце под землёй
+    else {
+      this.lights.sun.color.setHex(0x6495ed); // синеватый
+    }
+  }
+
+  // Вызывается каждый кадр из Game.js
+  update(deltaTime) {
+    if (!this.autoUpdate) return; // если выключен - ничего не делаем
+
+
+    // Двигаем время вперёд
+    this.timeOfDay += this.cycleSpeed * deltaTime;
+
+    // Если прошли полный круг - начинаем заново
+    if (this.timeOfDay >= 1.0) {
+      this.timeOfDay = 0;
+    }
+
+    // Обновляем солнце
+    this.updateSunPosition();
   }
 
   dispose() {
