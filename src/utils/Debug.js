@@ -1,47 +1,54 @@
 // src/utils/Debug.js
-import { GUI } from "lil-gui";
+import { Pane } from "tweakpane";
 import { LightingDebug } from "./debug/LightingDebug.js";
 import { PhysicsDebug } from "./debug/PhysicsDebug.js";
 import { InputDebug } from "./debug/InputDebug.js";
+import { VehicleDebug } from "./debug/VehicleDebug.js";
 
 export class Debug {
   constructor(game) {
     this.game = game;
-    this.gui = new GUI({ title: "🎮 Debug Panel" });
+    this.pane = new Pane({ title: "🎮 Debug Panel" });
 
     this.init();
   }
 
   init() {
     // Инициализируем отдельные debug модули
-    new LightingDebug(this.gui, this.game);
-    new PhysicsDebug(this.gui, this.game);
-    new InputDebug(this.gui, this.game);
+    new VehicleDebug(this.pane, this.game);
+    new LightingDebug(this.pane, this.game);
+    new PhysicsDebug(this.pane, this.game);
+    new InputDebug(this.pane, this.game);
 
     // Можно добавить общую информацию
     this.addGeneralInfo();
   }
 
   addGeneralInfo() {
-    const infoFolder = this.gui.addFolder("ℹ️ Info");
+    const infoFolder = this.pane.addFolder({
+      expanded: false,
+      title: "ℹ️ Info",
+    });
 
-    const info = {
-      fps: "0",
-      renderer: this.game.renderer.info.render.triangles,
+    this.info = {
+      fps: 0,
     };
 
     // FPS счётчик
     let lastTime = performance.now();
     let frames = 0;
 
-    const fpsController = infoFolder.add(info, "fps").name("FPS").disable();
+    infoFolder.addBinding(this.info, "fps", {
+      readonly: true,
+      label: "FPS",
+    });
 
     const updateFPS = () => {
       frames++;
       const currentTime = performance.now();
 
       if (currentTime >= lastTime + 1000) {
-        info.fps = frames.toString();
+        this.info.fps = frames;
         frames = 0;
         lastTime = currentTime;
       }
@@ -50,21 +57,19 @@ export class Debug {
     };
 
     updateFPS();
-
-    infoFolder.open();
   }
 
   // Показать/скрыть панель
   toggle() {
-    if (this.gui._hidden) {
-      this.gui.show();
+    if (this.pane.element.style.display === "none") {
+      this.pane.element.style.display = "";
     } else {
-      this.gui.hide();
+      this.pane.element.style.display = "none";
     }
   }
 
   // Удалить панель
   dispose() {
-    this.gui.destroy();
+    this.pane.dispose();
   }
 }

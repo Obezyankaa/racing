@@ -6,6 +6,7 @@ import { CameraController } from "../systems/CameraController.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
 import { InputController } from "../systems/InputController.js";
 import { Debug } from "../utils/Debug.js";
+import { DynamicRayCastVehicleController } from "../entities/vehicles/DynamicRayCastVehicleController.js";
 
 export class Game {
   constructor() {
@@ -77,8 +78,8 @@ export class Game {
     // Используем сохранённую ссылку на RAPIER
     const RAPIER = this.RAPIER;
 
-    // Пол (плоскость)
-    const groundGeometry = new THREE.PlaneGeometry(20, 20);
+    // Пол (плоскость) - увеличиваем для тестов
+    const groundGeometry = new THREE.PlaneGeometry(100, 100);
     const groundMaterial = new THREE.MeshStandardMaterial({
       color: 0x3a5f0b,
       side: THREE.DoubleSide,
@@ -92,26 +93,12 @@ export class Game {
     const groundBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0);
     const groundBody = this.physics.world.createRigidBody(groundBodyDesc);
 
-    // Используем halfExtents для создания плоского box (20x0.1x20)
-    const groundColliderDesc = RAPIER.ColliderDesc.cuboid(10, 0.1, 10);
+    // Используем halfExtents для создания плоского box (100x0.1x100)
+    const groundColliderDesc = RAPIER.ColliderDesc.cuboid(50, 0.1, 50);
     this.physics.world.createCollider(groundColliderDesc, groundBody);
 
-    // Падающий куб
-    const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    const cubeMesh = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cubeMesh.position.set(0, 5, 0);
-    cubeMesh.castShadow = true;
-    this.scene.add(cubeMesh);
-
-    // Физическое тело для куба (динамическое)
-    const cubeBodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(0, 5, 0);
-    const cubeBody = this.physics.world.createRigidBody(cubeBodyDesc);
-
-    const cubeColliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 0.5, 0.5);
-    this.physics.world.createCollider(cubeColliderDesc, cubeBody);
-
-    this.physics.addBody(cubeBody, cubeMesh);
+    // Создаём машину с raycast vehicle controller
+    this.vehicle = new DynamicRayCastVehicleController(this);
   }
 
   animate() {
@@ -123,11 +110,18 @@ export class Game {
     this.inputController.update(); // важно вызывать первым
     this.cameraController.update();
     this.lightingSystem.update(deltaTime);
+
+    // Обновляем машину
+    if (this.vehicle) {
+      this.vehicle.handleInput(this.inputController);
+      this.vehicle.update(deltaTime);
+    }
+
     this.physics.update(deltaTime);
 
-    // Тестируем Input (можно удалить потом)
-    if (this.inputController.isJustPressed("reset")) {
-      console.log("Reset нажат!");
+    // Сброс машины по кнопке R
+    if (this.inputController.isJustPressed("reset") && this.vehicle) {
+      this.vehicle.reset();
     }
 
     // Рендерим

@@ -1,8 +1,8 @@
 // src/utils/debug/PhysicsDebug.js
 
 export class PhysicsDebug {
-  constructor(gui, game) {
-    this.gui = gui;
+  constructor(pane, game) {
+    this.pane = pane;
     this.game = game;
     this.params = {};
 
@@ -10,37 +10,29 @@ export class PhysicsDebug {
   }
 
   init() {
-    const physicsFolder = this.gui.addFolder("⚛️ Physics");
+    const physicsFolder = this.pane.addFolder({
+      expanded: false,
+      title: "⚛️ Physics",
+    });
 
-    this.params.gravity = -9.82;
+    this.params.gravity = -9.81;
 
     physicsFolder
-      .add(this.params, "gravity", -20, 0, 0.1)
-      .name("Gravity")
-      .onChange((value) => {
-        this.game.physics.world.gravity.y = value;
+      .addBinding(this.params, "gravity", {
+        min: -20,
+        max: 0,
+        step: 0.1,
+        label: "Gravity",
+      })
+      .on("change", (ev) => {
+        this.game.physics.world.gravity.y = ev.value;
       });
 
-    // Кнопка сброса куба
-    physicsFolder
-      .add(
-        {
-          reset: () => {
-            // Найдём куб и сбросим его позицию
-            const cube = this.game.physics.bodies.find(
-              (b) => b.body.mass === 1,
-            );
-            if (cube) {
-              cube.body.position.set(0, 5, 0);
-              cube.body.velocity.set(0, 0, 0);
-              cube.body.angularVelocity.set(0, 0, 0);
-            }
-          },
-        },
-        "reset",
-      )
-      .name("Reset Cube");
-
-    physicsFolder.open();
+    // Кнопка сброса машины
+    physicsFolder.addButton({ title: "Reset Vehicle" }).on("click", () => {
+      if (this.game.vehicle) {
+        this.game.vehicle.reset();
+      }
+    });
   }
 }

@@ -1,8 +1,8 @@
 // src/utils/debug/InputDebug.js
 
 export class InputDebug {
-  constructor(gui, game) {
-    this.gui = gui;
+  constructor(pane, game) {
+    this.pane = pane;
     this.game = game;
     this.params = {};
 
@@ -10,17 +10,19 @@ export class InputDebug {
   }
 
   init() {
-    const inputFolder = this.gui.addFolder("🎮 Input");
+    const inputFolder = this.pane.addFolder({
+      expanded: false,
+      title: "🎮 Input",
+    });
 
     // Показываем состояние всех кнопок
     this.game.inputController.bindings.forEach((binding) => {
       this.params[binding.name] = false;
 
-      inputFolder
-        .add(this.params, binding.name)
-        .name(`${binding.name} (${binding.keys.join(", ")})`)
-        .disable()
-        .listen();
+      inputFolder.addBinding(this.params, binding.name, {
+        readonly: true,
+        label: `${binding.name} (${binding.keys.join(", ")})`,
+      });
     });
 
     // Обновляем состояния в реальном времени
@@ -34,7 +36,5 @@ export class InputDebug {
     };
 
     update();
-
-    inputFolder.open();
   }
 }

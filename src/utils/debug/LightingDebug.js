@@ -1,8 +1,8 @@
 // src/utils/debug/LightingDebug.js
 
 export class LightingDebug {
-  constructor(gui, game) {
-    this.gui = gui;
+  constructor(pane, game) {
+    this.pane = pane;
     this.game = game;
     this.params = {};
 
@@ -11,7 +11,9 @@ export class LightingDebug {
   }
 
   init() {
-    const lightingFolder = this.gui.addFolder("☀️ Lighting");
+    const lightingFolder = this.pane.addFolder({ expanded: false, title: "☀️ Lighting" });
+
+    lightingFolder
 
     // Параметры для контроля
     this.params.timeOfDay = this.game.lightingSystem.timeOfDay;
@@ -20,45 +22,52 @@ export class LightingDebug {
 
     // Слайдер времени суток
     lightingFolder
-      .add(this.params, "timeOfDay", 0, 1, 0.01)
-      .name("Time of Day")
-      .onChange((value) => {
-        this.game.lightingSystem.setTimeOfDay(value);
+      .addBinding(this.params, "timeOfDay", {
+        min: 0,
+        max: 1,
+        step: 0.01,
+        label: "Time of Day",
       })
-      .listen(); // автообновление когда цикл работает
+      .on("change", (ev) => {
+        this.game.lightingSystem.setTimeOfDay(ev.value);
+      });
 
     // Чекбокс включения цикла
     lightingFolder
-      .add(this.params, "autoUpdate")
-      .name("Auto Cycle")
-      .onChange((value) => {
-        this.game.lightingSystem.autoUpdate = value;
+      .addBinding(this.params, "autoUpdate", {
+        label: "Auto Cycle",
+      })
+      .on("change", (ev) => {
+        this.game.lightingSystem.autoUpdate = ev.value;
       });
 
     // Слайдер скорости цикла
     lightingFolder
-      .add(this.params, "cycleSpeed", 0.001, 0.1, 0.001)
-      .name("Cycle Speed")
-      .onChange((value) => {
-        this.game.lightingSystem.cycleSpeed = value;
+      .addBinding(this.params, "cycleSpeed", {
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        label: "Cycle Speed",
+      })
+      .on("change", (ev) => {
+        this.game.lightingSystem.cycleSpeed = ev.value;
       });
-    
+
     // Быстрые кнопки
-    const presets = {
-      "Midnight (00:00)": () => this.setTime(0),
-      "Dawn (06:00)": () => this.setTime(0.25),
-      "Noon (12:00)": () => this.setTime(0.5),
-      "Sunset (18:00)": () => this.setTime(0.75),
-    };
+    const presetsFolder = lightingFolder.addFolder({ title: "⏰ Quick Presets" });
 
-    const presetsFolder = lightingFolder.addFolder("⏰ Quick Presets");
-
-    Object.entries(presets).forEach(([name, fn]) => {
-      presetsFolder.add({ action: fn }, "action").name(name);
+    presetsFolder.addButton({ title: "Midnight (00:00)" }).on("click", () => {
+      this.setTime(0);
     });
-
-    presetsFolder.open();
-    lightingFolder.open();
+    presetsFolder.addButton({ title: "Dawn (06:00)" }).on("click", () => {
+      this.setTime(0.25);
+    });
+    presetsFolder.addButton({ title: "Noon (12:00)" }).on("click", () => {
+      this.setTime(0.5);
+    });
+    presetsFolder.addButton({ title: "Sunset (18:00)" }).on("click", () => {
+      this.setTime(0.75);
+    });
   }
 
   setTime(value) {
