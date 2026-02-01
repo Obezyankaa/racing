@@ -128,18 +128,6 @@ export class Game {
       this.vehicle.reset();
     }
 
-    // Переключение режима камеры по кнопке C
-    // if (this.inputController.isJustPressed("cameraToggle")) {
-    //   console.log("C pressed! Current mode:", this.cameraController.getMode());
-    //   this.cameraController.toggleFollowMode(this.vehicle);
-    //   console.log("New mode:", this.cameraController.getMode());
-    // }
-
-    if (this.inputController.isJustPressed("myCameraToogle")) {
-      this.cameraController.changeMode('shoty');
-  
-    }
-
     // Рендерим
     this.renderer.render(this.scene, this.cameraController.getCamera());
 

@@ -11,7 +11,7 @@ export class DynamicRayCastVehicleController {
     this.chassisConfig = {
       width: 1.0, // ширина кузова (метры)
       height: 0.5, // высота кузова
-      length: 2.0, // длина кузова
+      length: 3.0, // длина кузова
       mass: 500, // масса (кг)
     };
 
@@ -206,13 +206,18 @@ export class DynamicRayCastVehicleController {
     // Применяем силы
     if (accelerate) {
       this.engineForce = this.maxEngineForce;
+      this.brakeForce = 0;
     } else if (reverse) {
       this.engineForce = -this.maxEngineForce * 0.5;
-    } else {
+      this.brakeForce = 0;
+    } else if (brake) {
       this.engineForce = 0;
+      this.brakeForce = this.maxBrakeForce;
+    } else {
+      // Нет нажатий - лёгкое торможение чтобы машина не катилась сама
+      this.engineForce = 0;
+      this.brakeForce = 0.5; // маленькое торможение
     }
-
-    this.brakeForce = brake ? this.maxBrakeForce : 0;
   }
 
   update(deltaTime) {
@@ -309,5 +314,10 @@ export class DynamicRayCastVehicleController {
   getSpeed() {
     const vel = this.chassisBody.linvel();
     return Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
+  }
+
+  isMoving() {
+    // Машина движется если скорость больше 0.5
+    return this.getSpeed() > 0.5;
   }
 }
