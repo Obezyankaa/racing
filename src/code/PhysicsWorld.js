@@ -17,7 +17,7 @@ export class PhysicsWorld {
     this.world = new RAPIER.World(gravity);
 
     this.initialized = true;
-    console.log("✅ Rapier physics initialized");
+    // console.log("✅ Rapier physics initialized");
 
     return RAPIER; // возвращаем RAPIER для использования в Game.js
   }

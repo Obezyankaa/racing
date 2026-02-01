@@ -17,13 +17,16 @@ export class VehicleDebug {
     this.suspensionLines = [];
     this.velocityArrow = null;
     this.wheelInfoSprites = [];
+    this.helpersCreated = false;
 
     this.init();
-    this.createVisualHelpers();
   }
 
   init() {
-    const vehicleFolder = this.pane.addFolder({ title: "🚗 Vehicle Debug" });
+    const vehicleFolder = this.pane.addFolder({
+      expanded: false,
+      title: "🚗 Vehicle Debug",
+    });
 
     // Чекбоксы для отображения
     vehicleFolder
@@ -182,6 +185,8 @@ export class VehicleDebug {
   }
 
   updateVisibility() {
+    if (!this.helpersCreated) return;
+
     this.raycastLines.forEach((r) => (r.line.visible = this.params.showRaycasts));
     this.suspensionLines.forEach(
       (l) => (l.visible = this.params.showSuspension)
@@ -194,6 +199,11 @@ export class VehicleDebug {
   startUpdate() {
     const update = () => {
       if (this.game.vehicle) {
+        // Создаём хелперы только когда машина готова
+        if (!this.helpersCreated) {
+          this.createVisualHelpers();
+          this.helpersCreated = true;
+        }
         this.updateDebugInfo();
         this.updateVisualHelpers();
       }

@@ -8,8 +8,9 @@ export class InputController {
     this.justReleased = {};
 
     this.init();
+    console.log(this.justPressed);
   }
-
+  
   init() {
     // Инициализируем состояния всех действий
     this.bindings.forEach((binding) => {
@@ -17,10 +18,11 @@ export class InputController {
       this.justPressed[binding.name] = false;
       this.justReleased[binding.name] = false;
     });
-
+    
     // Обработчики клавиатуры
     window.addEventListener("keydown", (e) => this.handleKeyDown(e));
     window.addEventListener("keyup", (e) => this.handleKeyUp(e));
+    console.log(this.justPressed);
   }
 
   handleKeyDown(event) {

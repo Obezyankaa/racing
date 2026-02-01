@@ -4,6 +4,7 @@ import { LightingDebug } from "./debug/LightingDebug.js";
 import { PhysicsDebug } from "./debug/PhysicsDebug.js";
 import { InputDebug } from "./debug/InputDebug.js";
 import { VehicleDebug } from "./debug/VehicleDebug.js";
+import { CameraDebug } from "./debug/CameraDebug.js";
 
 export class Debug {
   constructor(game) {
@@ -19,6 +20,7 @@ export class Debug {
     new LightingDebug(this.pane, this.game);
     new PhysicsDebug(this.pane, this.game);
     new InputDebug(this.pane, this.game);
+    new CameraDebug(this.pane, this.game);
 
     // Можно добавить общую информацию
     this.addGeneralInfo();

@@ -29,6 +29,9 @@ export class Game {
     // Camera Controller
     this.cameraController = new CameraController(this.renderer);
 
+    const axesHelper = new THREE.AxesHelper(5);
+       this.scene.add(axesHelper);
+
     // Input Controller
     this.inputController = new InputController([
       { name: "forward", keys: ["ArrowUp", "KeyW"] },
@@ -37,6 +40,8 @@ export class Game {
       { name: "right", keys: ["ArrowRight", "KeyD"] },
       { name: "brake", keys: ["Space"] },
       { name: "reset", keys: ["KeyR"] },
+      { name: "cameraToggle", keys: ["KeyC"] },
+      { name: "myCameraToogle", keys: ["KeyE"] },
     ]);
 
     // Lighting System
@@ -107,8 +112,7 @@ export class Game {
     const deltaTime = this.clock.getDelta();
 
     // Обновляем системы
-    this.inputController.update(); // важно вызывать первым
-    this.cameraController.update();
+    this.cameraController.update(deltaTime, this.vehicle);
     this.lightingSystem.update(deltaTime);
 
     // Обновляем машину
@@ -124,7 +128,22 @@ export class Game {
       this.vehicle.reset();
     }
 
+    // Переключение режима камеры по кнопке C
+    // if (this.inputController.isJustPressed("cameraToggle")) {
+    //   console.log("C pressed! Current mode:", this.cameraController.getMode());
+    //   this.cameraController.toggleFollowMode(this.vehicle);
+    //   console.log("New mode:", this.cameraController.getMode());
+    // }
+
+    if (this.inputController.isJustPressed("myCameraToogle")) {
+      this.cameraController.changeMode('shoty');
+  
+    }
+
     // Рендерим
     this.renderer.render(this.scene, this.cameraController.getCamera());
+
+    // Сбрасываем justPressed/justReleased в конце кадра
+    this.inputController.update();
   }
 }

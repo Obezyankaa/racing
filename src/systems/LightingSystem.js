@@ -63,9 +63,9 @@ export class LightingSystem {
     this.updateLightIntensity(sunHeight);
     this.updateLightColor(sunHeight);
 
-    console.log(
-      `Время: ${this.timeOfDay.toFixed(2)}, Высота: ${sunHeight.toFixed(2)}`,
-    );
+    // console.log(
+    //   `Время: ${this.timeOfDay.toFixed(2)}, Высота: ${sunHeight.toFixed(2)}`,
+    // );
   }
 
   // Меняем яркость в зависимости от высоты солнца

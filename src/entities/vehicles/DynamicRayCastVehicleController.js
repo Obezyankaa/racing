@@ -9,31 +9,31 @@ export class DynamicRayCastVehicleController {
 
     // Параметры шасси
     this.chassisConfig = {
-      width: 1.0,
-      height: 0.5,
-      length: 2.0,
-      mass: 150,
+      width: 1.0, // ширина кузова (метры)
+      height: 0.5, // высота кузова
+      length: 2.0, // длина кузова
+      mass: 500, // масса (кг)
     };
 
     // Параметры колёс
     this.wheelConfig = {
-      radius: 0.35,
-      suspensionRestLength: 0.3,
-      suspensionStiffness: 24.0,
-      maxSuspensionTravel: 0.25,
-      suspensionDamping: 2.3,
-      frictionSlip: 2.0,
+      radius: 0.35, // радиус колеса
+      suspensionRestLength: 0.3, // длина подвески в покое
+      suspensionStiffness: 24.0, // жёсткость пружины
+      maxSuspensionTravel: 0.25, // макс. ход подвески
+      suspensionDamping: 2.3, // демпфирование (гашение)
+      frictionSlip: 2.0, // коэффициент трения/скольжения
     };
 
     // Состояние управления
-    this.engineForce = 0;
-    this.steering = 0;
-    this.brakeForce = 0;
+    this.engineForce = 0; // текущая сила двигателя
+    this.steering = 0; // текущий угол руля
+    this.brakeForce = 0; // текущая сила торможения
 
     // Максимальные значения
-    this.maxEngineForce = 2000;
-    this.maxSteeringAngle = Math.PI / 6; // 30 градусов
-    this.maxBrakeForce = 50;
+    this.maxEngineForce = 2000; // макс. тяга
+    this.maxSteeringAngle = Math.PI / 6; // макс. угол руля (30°)
+    this.maxBrakeForce = 50; // макс. тормоз
 
     // Скорость отклика руля
     this.steeringSpeed = 3.0;
@@ -43,8 +43,8 @@ export class DynamicRayCastVehicleController {
   }
 
   init() {
-    this.createChassis();
-    this.createVehicleController();
+    this.createChassis(); // Rapier rigid body
+    this.createVehicleController(); //  Колёса и подвеска
     this.createWheelMeshes();
   }
 
@@ -73,12 +73,12 @@ export class DynamicRayCastVehicleController {
     const chassisColliderDesc = this.RAPIER.ColliderDesc.cuboid(
       width / 2,
       height / 2,
-      length / 2
+      length / 2,
     )
       .setMass(this.chassisConfig.mass)
-      .setFriction(0.5);
+      .setFriction(0.5); // - трение кузова (если врежется во что-то)
 
-    this.world.createCollider(chassisColliderDesc, this.chassisBody);
+    this.world.createCollider(chassisColliderDesc, this.chassisBody); // привязывает коллайдер к rigid body.
   }
 
   createVehicleController() {
@@ -104,25 +104,39 @@ export class DynamicRayCastVehicleController {
 
     this.wheelLocalPositions.forEach((pos, index) => {
       this.vehicleController.addWheel(
-        pos, // позиция
-        suspensionDirection, // направление подвески
-        axleDirection, // ось колеса
-        suspensionRestLength, // длина подвески в покое
-        radius // радиус колеса
+        pos, // позиция относительно шасси
+        suspensionDirection, // направление луча подвески
+        axleDirection, // ось вращения
+        suspensionRestLength, // длина подвески в покое (0.3м)
+        radius, // радиус колеса (0.35м)
       );
 
       // Настраиваем подвеску для каждого колеса
-      this.vehicleController.setWheelSuspensionStiffness(index, suspensionStiffness);
-      this.vehicleController.setWheelMaxSuspensionTravel(index, maxSuspensionTravel);
+      // Жёсткость пружины
+      this.vehicleController.setWheelSuspensionStiffness(
+        index,
+        suspensionStiffness,
+      );
+      // Максимальный ход подвески
+      this.vehicleController.setWheelMaxSuspensionTravel(
+        index,
+        maxSuspensionTravel,
+      );
+      // Сжатие (compression) - сопротивление при сжатии
       this.vehicleController.setWheelSuspensionCompression(
         index,
-        this.wheelConfig.suspensionDamping * 0.3
+        this.wheelConfig.suspensionDamping * 0.3,
       );
+      // Отбой (relaxation) - сопротивление при разжатии
       this.vehicleController.setWheelSuspensionRelaxation(
         index,
-        this.wheelConfig.suspensionDamping
+        this.wheelConfig.suspensionDamping,
       );
-      this.vehicleController.setWheelFrictionSlip(index, this.wheelConfig.frictionSlip);
+      // Трение/скольжение
+      this.vehicleController.setWheelFrictionSlip(
+        index,
+        this.wheelConfig.frictionSlip,
+      );
     });
   }
 
